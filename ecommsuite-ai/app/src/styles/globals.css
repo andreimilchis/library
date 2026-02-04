@@ -32,7 +32,7 @@
   }
 
   * {
-    @apply border-border-light;
+    border-color: #E5E5EA;
   }
 
   html {
