@@ -1,4 +1,4 @@
-# MarketFlow - Detailed Feature Specifications
+# EcommSuite.AI - Detailed Feature Specifications
 
 ## Module 1: Dashboard & Overview
 
@@ -701,7 +701,7 @@ BRAND KIT                                              [Save Changes]
 
 ## AI Features Summary
 
-### What AI Does in MarketFlow
+### What AI Does in EcommSuite.AI
 
 | Feature | What It Does | Where It's Used |
 |---------|--------------|-----------------|
@@ -717,4 +717,4 @@ BRAND KIT                                              [Save Changes]
 ---
 
 *Feature Specifications v1.0*
-*MarketFlow - E-Commerce Marketing Automation*
+*EcommSuite.AI - E-Commerce Marketing Automation*

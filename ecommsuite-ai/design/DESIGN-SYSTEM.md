@@ -1,8 +1,8 @@
-# MarketFlow Design System
+# EcommSuite.AI Design System
 
 ## Brand Identity
 
-### Brand Name: **MarketFlow**
+### Brand Name: **EcommSuite.AI**
 - **Market** = Marketing + Marketplace
 - **Flow** = Automation + Smooth experience
 
@@ -273,7 +273,7 @@ Features:
 ```
 SIDEBAR NAVIGATION
 ╭───────────────────────╮
-│  ◉ MARKETFLOW         │  ← Logo
+│  ◉ ECOMMSUITE.AI         │  ← Logo
 ├───────────────────────┤
 │                       │
 │  ▣  Dashboard         │  ← Active (highlighted)
@@ -438,12 +438,12 @@ Fifth Series:     #8B5CF6 (Purple)
 ```
 ┌─────────────────────────────────┐
 │                                 │
-│   ◉ MARKETFLOW                  │
+│   ◉ ECOMMSUITE.AI                  │
 │                                 │
 └─────────────────────────────────┘
 
 - Icon: Abstract "M" or flow symbol
-- Text: "MARKETFLOW" in bold
+- Text: "ECOMMSUITE.AI" in bold
 - Colors: Gradient #FF3131 → #FF914D
 ```
 
@@ -559,4 +559,4 @@ All text must meet WCAG 2.1 AA standards:
 ---
 
 *Design System v1.0*
-*MarketFlow - E-Commerce Marketing Automation*
+*EcommSuite.AI - E-Commerce Marketing Automation*

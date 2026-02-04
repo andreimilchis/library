@@ -1,8 +1,8 @@
-# MarketFlow - UI Wireframes & Screen Layouts
+# EcommSuite.AI - UI Wireframes & Screen Layouts
 
 ## Introduction
 
-This document contains ASCII wireframes for all major screens in MarketFlow. These serve as blueprints for designers and developers.
+This document contains ASCII wireframes for all major screens in EcommSuite.AI. These serve as blueprints for designers and developers.
 
 **Design Principles:**
 - Clean and minimal
@@ -21,7 +21,7 @@ This document contains ASCII wireframes for all major screens in MarketFlow. The
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                                                                             │
 │                                                                             │
-│                         ◉ MARKETFLOW                                        │
+│                         ◉ ECOMMSUITE.AI                                        │
 │                   Your Marketing on Autopilot                               │
 │                                                                             │
 │                                                                             │
@@ -64,7 +64,7 @@ Background: Subtle gradient or abstract shapes using brand colors
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                                                                             │
-│                         ◉ MARKETFLOW                                        │
+│                         ◉ ECOMMSUITE.AI                                        │
 │                   Start your free 14-day trial                              │
 │                                                                             │
 │              ┌─────────────────────────────────────────┐                    │
@@ -266,7 +266,7 @@ Background: Subtle gradient or abstract shapes using brand colors
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ ◉ MARKETFLOW │ Dashboard │ Campaigns │ Emails │ Creative │ Analytics │ ⚙ 👤 │
+│ ◉ ECOMMSUITE.AI │ Dashboard │ Campaigns │ Emails │ Creative │ Analytics │ ⚙ 👤 │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │  ┌─ WELCOME ───────────────────────────────────────────────────────────┐   │
@@ -331,7 +331,7 @@ Background: Subtle gradient or abstract shapes using brand colors
 
 ```
 ┌─────────────────────────────┐
-│ ☰  MARKETFLOW         🔔 👤 │
+│ ☰  ECOMMSUITE.AI         🔔 👤 │
 ├─────────────────────────────┤
 │                             │
 │  Good morning, Sarah! 👋    │
@@ -380,7 +380,7 @@ Background: Subtle gradient or abstract shapes using brand colors
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ ◉ MARKETFLOW │ Dashboard │ Campaigns │ Emails │ Creative │ Analytics │ ⚙ 👤 │
+│ ◉ ECOMMSUITE.AI │ Dashboard │ Campaigns │ Emails │ Creative │ Analytics │ ⚙ 👤 │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │  CAMPAIGNS                                          [+ New Campaign]        │
@@ -437,7 +437,7 @@ Background: Subtle gradient or abstract shapes using brand colors
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ ◉ MARKETFLOW │ Dashboard │ Campaigns │ Emails │ Creative │ Analytics │ ⚙ 👤 │
+│ ◉ ECOMMSUITE.AI │ Dashboard │ Campaigns │ Emails │ Creative │ Analytics │ ⚙ 👤 │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │  ← Back to Campaigns                                                        │
@@ -513,7 +513,7 @@ Background: Subtle gradient or abstract shapes using brand colors
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ ◉ MARKETFLOW │ Dashboard │ Campaigns │ Emails │ Creative │ Analytics │ ⚙ 👤 │
+│ ◉ ECOMMSUITE.AI │ Dashboard │ Campaigns │ Emails │ Creative │ Analytics │ ⚙ 👤 │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │  ← Back to Emails                              [Preview]  [Send Test]      │
@@ -575,7 +575,7 @@ Background: Subtle gradient or abstract shapes using brand colors
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ ◉ MARKETFLOW │ Dashboard │ Campaigns │ Emails │ Creative │ Analytics │ ⚙ 👤 │
+│ ◉ ECOMMSUITE.AI │ Dashboard │ Campaigns │ Emails │ Creative │ Analytics │ ⚙ 👤 │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │  CREATIVE STUDIO - BANNER                      [Templates]  [My Designs]   │
@@ -633,7 +633,7 @@ Background: Subtle gradient or abstract shapes using brand colors
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ ◉ MARKETFLOW │ Dashboard │ Campaigns │ Emails │ Creative │ Analytics │ ⚙ 👤 │
+│ ◉ ECOMMSUITE.AI │ Dashboard │ Campaigns │ Emails │ Creative │ Analytics │ ⚙ 👤 │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │  SETTINGS                                                                   │
@@ -678,7 +678,7 @@ Background: Subtle gradient or abstract shapes using brand colors
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ ◉ MARKETFLOW │ Dashboard │ Campaigns │ Emails │ Creative │ Analytics │ ⚙ 👤 │
+│ ◉ ECOMMSUITE.AI │ Dashboard │ Campaigns │ Emails │ Creative │ Analytics │ ⚙ 👤 │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │  SETTINGS > INTEGRATIONS                                                    │
@@ -826,4 +826,4 @@ Background: Subtle gradient or abstract shapes using brand colors
 ---
 
 *Wireframes Guide v1.0*
-*MarketFlow - E-Commerce Marketing Automation*
+*EcommSuite.AI - E-Commerce Marketing Automation*

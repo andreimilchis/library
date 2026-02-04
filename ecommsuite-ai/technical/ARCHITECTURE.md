@@ -1,8 +1,8 @@
-# MarketFlow - Technical Architecture (Explained Simply)
+# EcommSuite.AI - Technical Architecture (Explained Simply)
 
 ## How The System Works - The Big Picture
 
-Think of MarketFlow like a **smart assistant** that connects to all your marketing tools and manages them for you.
+Think of EcommSuite.AI like a **smart assistant** that connects to all your marketing tools and manages them for you.
 
 ```
                     ┌─────────────────────────────────────┐
@@ -12,7 +12,7 @@ Think of MarketFlow like a **smart assistant** that connects to all your marketi
                                       │
                                       ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                         MARKETFLOW                               │
+│                         ECOMMSUITE.AI                               │
 │                                                                  │
 │   ┌─────────────────────────────────────────────────────────┐   │
 │   │                    FRONTEND                              │   │
@@ -229,31 +229,31 @@ Only $29.99 - Shop Now!"
 
 **Shopify Connection:**
 ```
-MarketFlow ←→ Shopify REST/GraphQL API
+EcommSuite.AI ←→ Shopify REST/GraphQL API
              └→ Products, Orders, Customers
 ```
 
 **Meta (Facebook/Instagram) Connection:**
 ```
-MarketFlow ←→ Meta Marketing API
+EcommSuite.AI ←→ Meta Marketing API
              └→ Create Ads, Get Results, Manage Audiences
 ```
 
 **Google Ads Connection:**
 ```
-MarketFlow ←→ Google Ads API
+EcommSuite.AI ←→ Google Ads API
              └→ Search Ads, Shopping, Display, YouTube
 ```
 
 **TikTok Connection:**
 ```
-MarketFlow ←→ TikTok Marketing API
+EcommSuite.AI ←→ TikTok Marketing API
              └→ Video Ads, Spark Ads, Audiences
 ```
 
 **Email Service:**
 ```
-MarketFlow ←→ SendGrid API
+EcommSuite.AI ←→ SendGrid API
              └→ Send Emails, Track Opens/Clicks
 ```
 
@@ -313,7 +313,7 @@ Your Browser ──[HTTPS]──▶ CloudFlare (Protection)
 
 ### Code Organization:
 ```
-marketflow/
+ecommsuite-ai/
 ├── apps/
 │   ├── web/          # Frontend (Next.js)
 │   └── api/          # Backend (Node.js)
@@ -369,7 +369,7 @@ marketflow/
 
 ## Summary for Non-Technical Readers
 
-**Think of MarketFlow like a house:**
+**Think of EcommSuite.AI like a house:**
 
 - **Frontend** = The rooms you live in (what you see)
 - **API** = The electrical system (makes everything work)
@@ -385,4 +385,4 @@ marketflow/
 ---
 
 *Technical Architecture Document v1.0*
-*MarketFlow - E-Commerce Marketing Automation*
+*EcommSuite.AI - E-Commerce Marketing Automation*

@@ -1,8 +1,8 @@
-# MarketFlow Integration Guide
+# EcommSuite.AI Integration Guide
 
 ## Overview
 
-This document explains how MarketFlow connects to external platforms in **simple terms**. Think of integrations as "bridges" that let MarketFlow talk to other services.
+This document explains how EcommSuite.AI connects to external platforms in **simple terms**. Think of integrations as "bridges" that let EcommSuite.AI talk to other services.
 
 ---
 
@@ -10,7 +10,7 @@ This document explains how MarketFlow connects to external platforms in **simple
 
 ### What It Does
 
-Shopify is your online store. MarketFlow connects to it to get:
+Shopify is your online store. EcommSuite.AI connects to it to get:
 - Your products (names, descriptions, images, prices)
 - Your customers (who bought what, email addresses)
 - Your orders (what's selling, revenue data)
@@ -19,14 +19,14 @@ Shopify is your online store. MarketFlow connects to it to get:
 ### How It Works (The Simple Version)
 
 ```
-YOUR SHOPIFY STORE                    MARKETFLOW
+YOUR SHOPIFY STORE                    ECOMMSUITE.AI
       │                                   │
       │   1. You click "Connect"          │
       ├──────────────────────────────────▶│
       │                                   │
       │   2. Shopify asks: "Allow         │
       │◀──────────────────────────────────┤
-      │      MarketFlow access?"          │
+      │      EcommSuite.AI access?"          │
       │                                   │
       │   3. You click "Yes, Allow"       │
       ├──────────────────────────────────▶│
@@ -67,7 +67,7 @@ YOUR SHOPIFY STORE                    MARKETFLOW
 ### Permissions Requested
 
 ```
-MarketFlow will request access to:
+EcommSuite.AI will request access to:
 
 ✓ Read products         - See your product catalog
 ✓ Read orders          - See your sales data
@@ -96,7 +96,7 @@ Meta integration lets you:
 ### How It Works
 
 ```
-FACEBOOK BUSINESS                     MARKETFLOW
+FACEBOOK BUSINESS                     ECOMMSUITE.AI
       │                                   │
       │   1. Click "Connect Meta"         │
       ├──────────────────────────────────▶│
@@ -147,7 +147,7 @@ Before connecting, you need:
 ### Permissions Explained
 
 ```
-MarketFlow requests these Meta permissions:
+EcommSuite.AI requests these Meta permissions:
 
 ads_management        → Create and manage your ads
 ads_read             → View ad performance data
@@ -183,7 +183,7 @@ Google Ads integration enables:
 ### How It Works
 
 ```
-GOOGLE ADS                            MARKETFLOW
+GOOGLE ADS                            ECOMMSUITE.AI
       │                                   │
       │   1. Click "Connect Google"       │
       ├──────────────────────────────────▶│
@@ -234,14 +234,14 @@ To run Shopping ads, you also need Google Merchant Center:
 
 1. **Connect Merchant Center**
 2. **Verify your website**
-3. **Upload product feed** (MarketFlow does this automatically from Shopify!)
+3. **Upload product feed** (EcommSuite.AI does this automatically from Shopify!)
 4. **Link to Google Ads**
 
 ### Data That Syncs
 
 | Data | From/To | Use |
 |------|---------|-----|
-| Campaigns | Both ways | Manage from MarketFlow |
+| Campaigns | Both ways | Manage from EcommSuite.AI |
 | Keywords | Both ways | Search ad targeting |
 | Products | To Google | Shopping ads |
 | Performance | From Google | Reporting |
@@ -262,7 +262,7 @@ TikTok integration lets you:
 ### How It Works
 
 ```
-TIKTOK BUSINESS                       MARKETFLOW
+TIKTOK BUSINESS                       ECOMMSUITE.AI
       │                                   │
       │   1. Click "Connect TikTok"       │
       ├──────────────────────────────────▶│
@@ -326,15 +326,15 @@ SendGrid powers all email sending:
 
 ### How It Works
 
-**This is automatic!** MarketFlow handles the SendGrid connection for you. You don't need to set up anything.
+**This is automatic!** EcommSuite.AI handles the SendGrid connection for you. You don't need to set up anything.
 
 ```
-MARKETFLOW                            SENDGRID
+ECOMMSUITE.AI                            SENDGRID
       │                                   │
       │   You create an email             │
       │   You click "Send"                │
       │                                   │
-      │   MarketFlow sends to SendGrid    │
+      │   EcommSuite.AI sends to SendGrid    │
       ├──────────────────────────────────▶│
       │                                   │
       │   SendGrid delivers to inboxes    │
@@ -382,13 +382,13 @@ Track website visitors and behavior:
 
 Track conversions from Facebook ads:
 - Automatically connected with Meta integration
-- Pixel data flows into MarketFlow
+- Pixel data flows into EcommSuite.AI
 
 ### TikTok Pixel
 
 Track conversions from TikTok ads:
 - Automatically connected with TikTok integration
-- Events sync to MarketFlow
+- Events sync to EcommSuite.AI
 
 ---
 
@@ -511,4 +511,4 @@ INTEGRATION STATUS
 ---
 
 *Integration Guide v1.0*
-*MarketFlow - E-Commerce Marketing Automation*
+*EcommSuite.AI - E-Commerce Marketing Automation*

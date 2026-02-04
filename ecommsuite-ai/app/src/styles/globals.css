@@ -1,0 +1,398 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   ECOMMSUITE.AI - Global Styles
+   Brand Colors: #FF3131 → #FF914D
+   ============================================ */
+
+@layer base {
+  :root {
+    /* Brand Colors */
+    --brand-red: #FF3131;
+    --brand-orange: #FF914D;
+
+    /* Gradient */
+    --brand-gradient: linear-gradient(135deg, #FF3131 0%, #FF914D 100%);
+
+    /* Backgrounds */
+    --bg-primary: #FFFFFF;
+    --bg-secondary: #F8F9FA;
+    --bg-tertiary: #F1F3F5;
+
+    /* Text */
+    --text-primary: #1A1A2E;
+    --text-secondary: #636366;
+    --text-muted: #8E8E93;
+
+    /* Borders */
+    --border-light: #E5E5EA;
+    --border-default: #D1D1D6;
+  }
+
+  * {
+    @apply border-border-light;
+  }
+
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply bg-white text-dark-800 antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer components {
+  /* ============================================
+     BUTTONS
+     ============================================ */
+
+  .btn {
+    @apply inline-flex items-center justify-center rounded-xl px-6 py-3 font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply btn bg-brand-gradient text-white shadow-brand hover:shadow-brand-lg hover:scale-[1.02] focus:ring-primary-500;
+  }
+
+  .btn-secondary {
+    @apply btn bg-white text-dark-800 border-2 border-dark-200 hover:border-primary-500 hover:text-primary-500 focus:ring-primary-500;
+  }
+
+  .btn-ghost {
+    @apply btn bg-transparent text-dark-600 hover:bg-dark-100 hover:text-dark-800 focus:ring-dark-300;
+  }
+
+  .btn-danger {
+    @apply btn bg-error text-white hover:bg-error-dark focus:ring-error;
+  }
+
+  .btn-sm {
+    @apply px-4 py-2 text-sm rounded-lg;
+  }
+
+  .btn-lg {
+    @apply px-8 py-4 text-lg rounded-2xl;
+  }
+
+  /* ============================================
+     CARDS
+     ============================================ */
+
+  .card {
+    @apply bg-white rounded-2xl border border-dark-100 shadow-card transition-shadow duration-200;
+  }
+
+  .card-hover {
+    @apply card hover:shadow-card-hover;
+  }
+
+  .card-gradient {
+    @apply card bg-brand-gradient-soft border-primary-200;
+  }
+
+  /* ============================================
+     INPUTS
+     ============================================ */
+
+  .input {
+    @apply w-full px-4 py-3 rounded-xl border border-dark-200 bg-white text-dark-800 placeholder-dark-400 transition-all duration-200;
+    @apply focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500;
+    @apply disabled:bg-dark-50 disabled:cursor-not-allowed;
+  }
+
+  .input-error {
+    @apply input border-error focus:ring-error focus:border-error;
+  }
+
+  .label {
+    @apply block text-sm font-medium text-dark-700 mb-2;
+  }
+
+  .input-group {
+    @apply space-y-1;
+  }
+
+  /* ============================================
+     BADGES
+     ============================================ */
+
+  .badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold;
+  }
+
+  .badge-primary {
+    @apply badge bg-primary-100 text-primary-700;
+  }
+
+  .badge-success {
+    @apply badge bg-success-light text-success-dark;
+  }
+
+  .badge-warning {
+    @apply badge bg-warning-light text-warning-dark;
+  }
+
+  .badge-error {
+    @apply badge bg-error-light text-error-dark;
+  }
+
+  .badge-neutral {
+    @apply badge bg-dark-100 text-dark-600;
+  }
+
+  /* ============================================
+     NAVIGATION
+     ============================================ */
+
+  .nav-link {
+    @apply flex items-center gap-3 px-4 py-3 rounded-xl text-dark-600 font-medium transition-all duration-200;
+    @apply hover:bg-brand-gradient-soft hover:text-primary-600;
+  }
+
+  .nav-link-active {
+    @apply nav-link bg-brand-gradient text-white hover:bg-brand-gradient hover:text-white;
+  }
+
+  /* ============================================
+     STATS CARD
+     ============================================ */
+
+  .stat-card {
+    @apply card p-6;
+  }
+
+  .stat-value {
+    @apply text-3xl font-bold text-dark-800;
+  }
+
+  .stat-label {
+    @apply text-sm text-dark-500 mt-1;
+  }
+
+  .stat-change-positive {
+    @apply text-success text-sm font-medium flex items-center gap-1;
+  }
+
+  .stat-change-negative {
+    @apply text-error text-sm font-medium flex items-center gap-1;
+  }
+
+  /* ============================================
+     TABLE
+     ============================================ */
+
+  .table {
+    @apply w-full text-left;
+  }
+
+  .table th {
+    @apply px-4 py-3 text-xs font-semibold text-dark-500 uppercase tracking-wider bg-dark-50 first:rounded-tl-xl last:rounded-tr-xl;
+  }
+
+  .table td {
+    @apply px-4 py-4 text-sm text-dark-700 border-b border-dark-100;
+  }
+
+  .table tbody tr:hover {
+    @apply bg-dark-50;
+  }
+
+  /* ============================================
+     SIDEBAR
+     ============================================ */
+
+  .sidebar {
+    @apply fixed left-0 top-0 h-full w-64 bg-white border-r border-dark-100 flex flex-col z-40;
+  }
+
+  .sidebar-logo {
+    @apply px-6 py-6 border-b border-dark-100;
+  }
+
+  .sidebar-nav {
+    @apply flex-1 px-4 py-6 space-y-2 overflow-y-auto;
+  }
+
+  .sidebar-footer {
+    @apply px-4 py-4 border-t border-dark-100;
+  }
+
+  /* ============================================
+     HEADER
+     ============================================ */
+
+  .header {
+    @apply fixed top-0 right-0 left-64 h-16 bg-white border-b border-dark-100 flex items-center justify-between px-6 z-30;
+  }
+
+  /* ============================================
+     MAIN CONTENT
+     ============================================ */
+
+  .main-content {
+    @apply ml-64 pt-16 min-h-screen bg-dark-50;
+  }
+
+  .page-container {
+    @apply p-6 max-w-7xl mx-auto;
+  }
+
+  .page-header {
+    @apply mb-8;
+  }
+
+  .page-title {
+    @apply text-2xl font-bold text-dark-800;
+  }
+
+  .page-subtitle {
+    @apply text-dark-500 mt-1;
+  }
+
+  /* ============================================
+     MODAL
+     ============================================ */
+
+  .modal-overlay {
+    @apply fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4;
+  }
+
+  .modal-content {
+    @apply bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto;
+  }
+
+  .modal-header {
+    @apply px-6 py-4 border-b border-dark-100;
+  }
+
+  .modal-body {
+    @apply px-6 py-6;
+  }
+
+  .modal-footer {
+    @apply px-6 py-4 border-t border-dark-100 flex justify-end gap-3;
+  }
+
+  /* ============================================
+     DROPDOWN
+     ============================================ */
+
+  .dropdown-menu {
+    @apply absolute right-0 mt-2 w-56 bg-white rounded-xl border border-dark-100 shadow-lg py-2 z-50;
+  }
+
+  .dropdown-item {
+    @apply flex items-center gap-3 px-4 py-2 text-sm text-dark-700 hover:bg-dark-50 cursor-pointer transition-colors;
+  }
+
+  /* ============================================
+     TOAST
+     ============================================ */
+
+  .toast {
+    @apply fixed bottom-4 right-4 px-6 py-4 rounded-xl shadow-lg z-50 flex items-center gap-3;
+  }
+
+  .toast-success {
+    @apply toast bg-success text-white;
+  }
+
+  .toast-error {
+    @apply toast bg-error text-white;
+  }
+
+  .toast-warning {
+    @apply toast bg-warning text-white;
+  }
+
+  /* ============================================
+     LOADING
+     ============================================ */
+
+  .spinner {
+    @apply animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full;
+  }
+
+  .skeleton {
+    @apply bg-dark-200 rounded animate-pulse;
+  }
+
+  /* ============================================
+     TABS
+     ============================================ */
+
+  .tabs {
+    @apply flex gap-1 bg-dark-100 p-1 rounded-xl;
+  }
+
+  .tab {
+    @apply px-4 py-2 rounded-lg text-sm font-medium text-dark-600 transition-all duration-200 hover:text-dark-800;
+  }
+
+  .tab-active {
+    @apply tab bg-white text-dark-800 shadow-sm;
+  }
+
+  /* ============================================
+     CHART CONTAINER
+     ============================================ */
+
+  .chart-container {
+    @apply card p-6;
+  }
+
+  .chart-title {
+    @apply text-lg font-semibold text-dark-800 mb-4;
+  }
+
+  /* ============================================
+     EMPTY STATE
+     ============================================ */
+
+  .empty-state {
+    @apply flex flex-col items-center justify-center py-16 text-center;
+  }
+
+  .empty-state-icon {
+    @apply w-16 h-16 text-dark-300 mb-4;
+  }
+
+  .empty-state-title {
+    @apply text-lg font-semibold text-dark-700 mb-2;
+  }
+
+  .empty-state-description {
+    @apply text-dark-500 max-w-md;
+  }
+}
+
+@layer utilities {
+  /* Gradient text */
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-brand-gradient;
+  }
+
+  /* Hide scrollbar */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Custom scrollbar */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-dark-100 rounded;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-dark-300 rounded hover:bg-dark-400;
+  }
+}

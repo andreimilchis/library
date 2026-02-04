@@ -1,8 +1,8 @@
-# MarketFlow - E-Commerce Marketing Automation SaaS
+# EcommSuite.AI - E-Commerce Marketing Automation SaaS
 
 ## Your Vision in Simple Words
 
-**MarketFlow** is a "one-stop-shop" platform where e-commerce store owners can:
+**EcommSuite.AI** is a "one-stop-shop" platform where e-commerce store owners can:
 - Run all their ads (Facebook, Google, TikTok) from ONE place
 - Send emails to customers automatically
 - Create beautiful banners and videos without being a designer
@@ -34,11 +34,11 @@ Think of it as having a **marketing team in a box** that works 24/7.
 
 ---
 
-## The Big Picture - What MarketFlow Does
+## The Big Picture - What EcommSuite.AI Does
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                      MARKETFLOW DASHBOARD                        │
+│                      ECOMMSUITE.AI DASHBOARD                        │
 │                                                                  │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐        │
 │  │ SHOPIFY  │  │   META   │  │  GOOGLE  │  │  TIKTOK  │        │
@@ -88,7 +88,7 @@ Think of it as having a **marketing team in a box** that works 24/7.
 ### 2. PAID MEDIA HUB (Ad Management)
 
 #### Facebook/Meta Ads
-- Create ads directly from MarketFlow
+- Create ads directly from EcommSuite.AI
 - AI suggests best audiences based on your customers
 - Automatic budget optimization
 - See which ads are making money vs. wasting money
@@ -295,9 +295,9 @@ This gradient represents:
 
 ## Competitive Advantages
 
-### Why MarketFlow Wins:
+### Why EcommSuite.AI Wins:
 
-| Problem | Current Solutions | MarketFlow Solution |
+| Problem | Current Solutions | EcommSuite.AI Solution |
 |---------|------------------|---------------------|
 | Too many tools | Mailchimp + AdEspresso + Canva + Google Ads | Everything in ONE place |
 | Expensive | $200-500/month combined | Starting at $49/month |
@@ -426,7 +426,7 @@ This gradient represents:
 
 ## Summary
 
-**MarketFlow** = All your e-commerce marketing in ONE place
+**EcommSuite.AI** = All your e-commerce marketing in ONE place
 
 - **Connect** your Shopify store
 - **Create** ads, emails, and designs
@@ -443,4 +443,4 @@ This gradient represents:
 ---
 
 *Document Version 1.0*
-*Created for MarketFlow SaaS Development*
+*Created for EcommSuite.AI SaaS Development*

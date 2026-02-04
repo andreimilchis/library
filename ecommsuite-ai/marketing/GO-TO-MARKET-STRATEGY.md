@@ -1,8 +1,8 @@
-# MarketFlow - Go-to-Market Strategy (US Launch)
+# EcommSuite.AI - Go-to-Market Strategy (US Launch)
 
 ## Executive Summary
 
-**Product:** MarketFlow - E-Commerce Marketing Automation SaaS
+**Product:** EcommSuite.AI - E-Commerce Marketing Automation SaaS
 **Target Market:** United States
 **Primary Customer:** Shopify store owners ($10K-$5M monthly revenue)
 **Launch Timeline:** 12 months from development start
@@ -26,7 +26,7 @@
 
 ### Customer Pain Points
 
-| Pain Point | Severity | MarketFlow Solution |
+| Pain Point | Severity | EcommSuite.AI Solution |
 |------------|----------|---------------------|
 | Too many tools | High | All-in-one platform |
 | Time consuming | High | AI automation |
@@ -45,7 +45,7 @@
  NARROW ─────────────────┼───────────────────── BROAD
  FEATURES                │                    FEATURES
                          │
-           AdEspresso    │      ★ MarketFlow
+           AdEspresso    │      ★ EcommSuite.AI
            (ads only)    │      (sweet spot)
                          │
                      LOW PRICE
@@ -153,7 +153,7 @@
 | Hootsuite (social) | $99 |
 | **Total:** | **$206-$721** |
 
-**MarketFlow:** $49-$349 (40-50% savings)
+**EcommSuite.AI:** $49-$349 (40-50% savings)
 
 ---
 
@@ -301,7 +301,7 @@
 ### 5. Community Building
 
 **Own Community:**
-- Facebook Group: "MarketFlow Users"
+- Facebook Group: "EcommSuite.AI Users"
 - Discord server for power users
 - Monthly virtual meetups
 
@@ -563,12 +563,12 @@ Website Visit → Free Trial (14 days) → Upgrade to Paid
 3. "One Platform. All Your Marketing."
 
 ### Value Proposition
-> MarketFlow is the all-in-one marketing platform for e-commerce stores. Connect your Shopify store and let AI handle your ads, emails, and creative—so you can focus on what you do best.
+> EcommSuite.AI is the all-in-one marketing platform for e-commerce stores. Connect your Shopify store and let AI handle your ads, emails, and creative—so you can focus on what you do best.
 
 ### Key Messages
 
 **For Time-Strapped Entrepreneurs:**
-> "Stop juggling 5 different marketing tools. MarketFlow brings everything together in one simple dashboard."
+> "Stop juggling 5 different marketing tools. EcommSuite.AI brings everything together in one simple dashboard."
 
 **For Results-Focused Owners:**
 > "Our customers see an average 40% improvement in ROAS within the first 60 days."
@@ -585,4 +585,4 @@ Website Visit → Free Trial (14 days) → Upgrade to Paid
 ---
 
 *Go-to-Market Strategy v1.0*
-*MarketFlow - E-Commerce Marketing Automation*
+*EcommSuite.AI - E-Commerce Marketing Automation*
