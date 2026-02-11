@@ -1,0 +1,415 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ==========================================
+// AUTH & USERS
+// ==========================================
+
+model User {
+  id             String    @id @default(cuid())
+  name           String
+  email          String    @unique
+  emailVerified  DateTime?
+  passwordHash   String
+  role           UserRole  @default(MEMBER)
+  avatarUrl      String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  agency         Agency?   @relation(fields: [agencyId], references: [id])
+  agencyId       String?
+
+  sessions       Session[]
+  reports        Report[]
+  schedules      Schedule[]
+
+  @@index([agencyId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+// ==========================================
+// AGENCY & WHITE LABELING
+// ==========================================
+
+model Agency {
+  id                String   @id @default(cuid())
+  name              String
+  slug              String   @unique
+  logoUrl           String?
+  primaryColor      String   @default("#2563eb")
+  secondaryColor    String   @default("#1e40af")
+  accentColor       String   @default("#3b82f6")
+  customDomain      String?
+  emailFromName     String?
+  emailFromAddress  String?
+  smtpHost          String?
+  smtpPort          Int?
+  smtpUser          String?
+  smtpPass          String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  users             User[]
+  clients           Client[]
+  reportTemplates   ReportTemplate[]
+}
+
+// ==========================================
+// CLIENTS
+// ==========================================
+
+model Client {
+  id              String   @id @default(cuid())
+  name            String
+  email           String
+  companyName     String?
+  website         String?
+  industry        String?  @default("E-commerce")
+  logoUrl         String?
+  notes           String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  agency          Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  agencyId        String
+
+  dataSources     DataSource[]
+  reports         Report[]
+  schedules       Schedule[]
+  kpiAlerts       KpiAlert[]
+
+  @@index([agencyId])
+  @@index([email])
+}
+
+// ==========================================
+// DATA SOURCES (Ad Platform Connections)
+// ==========================================
+
+model DataSource {
+  id              String         @id @default(cuid())
+  platform        AdPlatform
+  accountId       String
+  accountName     String?
+  accessToken     String
+  refreshToken    String?
+  tokenExpiresAt  DateTime?
+  isActive        Boolean        @default(true)
+  lastSyncAt      DateTime?
+  lastError       String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  client          Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientId        String
+
+  metricSnapshots MetricSnapshot[]
+  reportWidgets   ReportWidget[]
+
+  @@unique([platform, accountId, clientId])
+  @@index([clientId])
+  @@index([platform])
+}
+
+enum AdPlatform {
+  FACEBOOK_ADS
+  GOOGLE_ADS
+  TIKTOK_ADS
+}
+
+// ==========================================
+// METRIC SNAPSHOTS (Cached Data)
+// ==========================================
+
+model MetricSnapshot {
+  id              String     @id @default(cuid())
+  date            DateTime
+  campaignId      String?
+  campaignName    String?
+  adSetId         String?
+  adSetName       String?
+  adId            String?
+  adName          String?
+
+  // Core Metrics
+  impressions     Float      @default(0)
+  clicks          Float      @default(0)
+  spend           Float      @default(0)
+  conversions     Float      @default(0)
+  conversionValue Float      @default(0)
+  reach           Float      @default(0)
+
+  // E-commerce Specific
+  purchases       Float      @default(0)
+  purchaseValue   Float      @default(0)
+  addToCart       Float      @default(0)
+  addToCartValue  Float      @default(0)
+  checkoutInitiated Float    @default(0)
+  viewContent     Float      @default(0)
+
+  // Video Metrics (TikTok/Meta)
+  videoViews      Float      @default(0)
+  videoViews25    Float      @default(0)
+  videoViews50    Float      @default(0)
+  videoViews75    Float      @default(0)
+  videoViews100   Float      @default(0)
+
+  // Engagement
+  likes           Float      @default(0)
+  comments        Float      @default(0)
+  shares          Float      @default(0)
+
+  // Raw JSON for platform-specific metrics
+  rawData         Json?
+
+  createdAt       DateTime   @default(now())
+
+  dataSource      DataSource @relation(fields: [dataSourceId], references: [id], onDelete: Cascade)
+  dataSourceId    String
+
+  @@index([dataSourceId, date])
+  @@index([date])
+  @@index([campaignId])
+}
+
+// ==========================================
+// REPORT TEMPLATES
+// ==========================================
+
+model ReportTemplate {
+  id              String   @id @default(cuid())
+  name            String
+  description     String?
+  isDefault       Boolean  @default(false)
+  layout          Json     // Stores the template layout configuration
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  agency          Agency?  @relation(fields: [agencyId], references: [id])
+  agencyId        String?
+
+  reports         Report[]
+
+  @@index([agencyId])
+}
+
+// ==========================================
+// REPORTS
+// ==========================================
+
+model Report {
+  id              String       @id @default(cuid())
+  title           String
+  description     String?
+  status          ReportStatus @default(DRAFT)
+  dateRangeStart  DateTime
+  dateRangeEnd    DateTime
+  compareStart    DateTime?    // Optional comparison period
+  compareEnd      DateTime?
+  pdfUrl          String?
+  sentAt          DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  client          Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientId        String
+
+  template        ReportTemplate? @relation(fields: [templateId], references: [id])
+  templateId      String?
+
+  createdBy       User?        @relation(fields: [createdById], references: [id])
+  createdById     String?
+
+  widgets         ReportWidget[]
+  deliveryLogs    DeliveryLog[]
+
+  @@index([clientId])
+  @@index([status])
+  @@index([createdById])
+}
+
+enum ReportStatus {
+  DRAFT
+  GENERATING
+  READY
+  SENT
+  FAILED
+}
+
+// ==========================================
+// REPORT WIDGETS
+// ==========================================
+
+model ReportWidget {
+  id              String     @id @default(cuid())
+  type            WidgetType
+  title           String?
+  metrics         String[]   // Array of metric keys to display
+  chartType       ChartType? // For chart widgets
+  position        Int        @default(0)
+  width           Int        @default(12)  // Grid width (1-12)
+  height          Int        @default(300) // Height in pixels
+  config          Json?      // Additional widget configuration
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  report          Report     @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  reportId        String
+
+  dataSource      DataSource? @relation(fields: [dataSourceId], references: [id])
+  dataSourceId    String?
+
+  @@index([reportId])
+}
+
+enum WidgetType {
+  KPI_CARD        // Single metric big number
+  CHART           // Line, bar, pie chart
+  TABLE           // Data table
+  COMPARISON      // Period comparison
+  PLATFORM_SUMMARY // Cross-platform summary
+  TEXT            // Custom text/notes
+  HEADER          // Section header
+  COMBINED_METRICS // Blended metrics from multiple sources
+}
+
+enum ChartType {
+  LINE
+  BAR
+  PIE
+  DONUT
+  AREA
+  TREEMAP
+}
+
+// ==========================================
+// SCHEDULES
+// ==========================================
+
+model Schedule {
+  id              String          @id @default(cuid())
+  name            String
+  frequency       ScheduleFrequency
+  dayOfWeek       Int?            // 0-6 for weekly
+  dayOfMonth      Int?            // 1-31 for monthly
+  hour            Int             @default(9) // Hour to send (0-23)
+  minute          Int             @default(0)
+  timezone        String          @default("Europe/Bucharest")
+  isActive        Boolean         @default(true)
+  lastRunAt       DateTime?
+  nextRunAt       DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  client          Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientId        String
+
+  createdBy       User?           @relation(fields: [createdById], references: [id])
+  createdById     String?
+
+  templateId      String?         // Which template to use
+  recipients      String[]        // Email addresses
+  dateRangeType   DateRangeType   @default(LAST_7_DAYS)
+
+  deliveryLogs    DeliveryLog[]
+
+  @@index([clientId])
+  @@index([nextRunAt])
+  @@index([isActive])
+}
+
+enum ScheduleFrequency {
+  DAILY
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+}
+
+enum DateRangeType {
+  YESTERDAY
+  LAST_7_DAYS
+  LAST_14_DAYS
+  LAST_30_DAYS
+  THIS_MONTH
+  LAST_MONTH
+  CUSTOM
+}
+
+// ==========================================
+// DELIVERY LOGS
+// ==========================================
+
+model DeliveryLog {
+  id              String        @id @default(cuid())
+  status          DeliveryStatus
+  recipientEmail  String
+  errorMessage    String?
+  sentAt          DateTime?
+  createdAt       DateTime      @default(now())
+
+  report          Report?       @relation(fields: [reportId], references: [id])
+  reportId        String?
+
+  schedule        Schedule?     @relation(fields: [scheduleId], references: [id])
+  scheduleId      String?
+
+  @@index([reportId])
+  @@index([scheduleId])
+  @@index([status])
+}
+
+enum DeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+  BOUNCED
+}
+
+// ==========================================
+// KPI ALERTS
+// ==========================================
+
+model KpiAlert {
+  id              String       @id @default(cuid())
+  metricKey       String       // e.g., "cpa", "roas", "ctr"
+  condition       AlertCondition
+  threshold       Float
+  isActive        Boolean      @default(true)
+  lastTriggeredAt DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  client          Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientId        String
+
+  @@index([clientId])
+  @@index([isActive])
+}
+
+enum AlertCondition {
+  ABOVE
+  BELOW
+  EQUALS
+  CHANGE_PERCENT_UP
+  CHANGE_PERCENT_DOWN
+}
