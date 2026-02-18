@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { AdPlatform } from "@/generated/prisma/client";
+import { AdPlatform } from "@prisma/client";
 import { FacebookAdsService, NormalizedMetrics } from "./facebook-ads";
 import { GoogleAdsService } from "./google-ads";
 import { TikTokAdsService } from "./tiktok-ads";

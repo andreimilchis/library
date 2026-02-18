@@ -1,4 +1,4 @@
-import { AdPlatform } from "@/generated/prisma/client";
+import { AdPlatform } from "@prisma/client";
 import { NormalizedMetrics } from "./facebook-ads";
 
 const TIKTOK_API_URL = "https://business-api.tiktok.com/open_api/v1.3";

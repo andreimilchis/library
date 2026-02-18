@@ -1,4 +1,4 @@
-import { AdPlatform } from "@/generated/prisma/client";
+import { AdPlatform } from "@prisma/client";
 
 const FACEBOOK_API_VERSION = "v21.0";
 const FACEBOOK_GRAPH_URL = `https://graph.facebook.com/${FACEBOOK_API_VERSION}`;

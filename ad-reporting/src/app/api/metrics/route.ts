@@ -1,6 +1,6 @@
 import { requireAuth } from "@/lib/auth";
 import { DataSyncService } from "@/services/data-sync";
-import { AdPlatform } from "@/generated/prisma/client";
+import { AdPlatform } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {

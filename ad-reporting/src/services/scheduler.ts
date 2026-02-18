@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { ReportGeneratorService } from "./report-generator";
-import { DateRangeType, ScheduleFrequency } from "@/generated/prisma/client";
+import { DateRangeType, ScheduleFrequency } from "@prisma/client";
 import {
   subDays,
   startOfMonth,

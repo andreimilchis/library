@@ -1,4 +1,4 @@
-import { AdPlatform } from "@/generated/prisma/client";
+import { AdPlatform } from "@prisma/client";
 import { NormalizedMetrics } from "./facebook-ads";
 
 const GOOGLE_ADS_API_VERSION = "v18";
