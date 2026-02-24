@@ -1,0 +1,519 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ==================== AUTH MODELS ====================
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  passwordHash  String
+  role          UserRole  @default(VIEWER)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  companyAccess CompanyUserAccess[]
+  auditLogs     AuditLog[]
+  sessions      Session[]
+
+  @@map("users")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+enum UserRole {
+  ADMIN
+  ACCOUNTANT
+  SALES
+  VIEWER
+}
+
+// ==================== COMPANY ====================
+
+model Company {
+  id                    String   @id @default(cuid())
+  name                  String
+  cui                   String
+  jNumber               String?
+  address               String
+  city                  String
+  county                String
+  country               String   @default("Romania")
+  phone                 String?
+  email                 String?
+  website               String?
+  logoUrl               String?
+  brandPrimaryColor     String?  @default("#1a56db")
+  brandSecondaryColor   String?
+  tvaRegistered         Boolean  @default(true)
+  tvaRateDefault        Float    @default(19)
+  eFacturaSPVToken      String?
+  eFacturaSPVCertPath   String?
+  defaultPaymentTerms   Int      @default(30)
+  defaultCurrency       String   @default("RON")
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  bankAccounts     CompanyBankAccount[]
+  invoiceSeries    InvoiceSeries[]
+  clients          Client[]
+  products         Product[]
+  invoices         Invoice[]
+  payments         Payment[]
+  expenses         Expense[]
+  suppliers        Supplier[]
+  warehouses       Warehouse[]
+  nirs             NIR[]
+  stockMovements   StockMovement[]
+  userAccess       CompanyUserAccess[]
+  auditLogs        AuditLog[]
+
+  @@map("companies")
+}
+
+model CompanyBankAccount {
+  id        String  @id @default(cuid())
+  companyId String
+  iban      String
+  bankName  String
+  currency  String  @default("RON")
+  isDefault Boolean @default(false)
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("company_bank_accounts")
+}
+
+model CompanyUserAccess {
+  id        String   @id @default(cuid())
+  companyId String
+  userId    String
+  role      UserRole @default(VIEWER)
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, userId])
+  @@map("company_user_access")
+}
+
+model InvoiceSeries {
+  id            String      @id @default(cuid())
+  companyId     String
+  prefix        String
+  currentNumber Int         @default(0)
+  type          InvoiceType @default(FACTURA)
+  isActive      Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+
+  company  Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  invoices Invoice[]
+
+  @@unique([companyId, prefix])
+  @@map("invoice_series")
+}
+
+// ==================== CLIENT ====================
+
+model Client {
+  id              String     @id @default(cuid())
+  companyId       String
+  type            ClientType @default(SRL)
+  name            String
+  cui             String?
+  jNumber         String?
+  address         String?
+  city            String?
+  county          String?
+  country         String     @default("Romania")
+  contactPerson   String?
+  email           String?
+  phone           String?
+  paymentTermDays Int        @default(30)
+  creditLimit     Float?
+  notes           String?
+  tags            String[]   @default([])
+  isBadPayer      Boolean    @default(false)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  company      Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  bankAccounts ClientBankAccount[]
+  invoices     Invoice[]
+  payments     Payment[]
+
+  @@map("clients")
+}
+
+model ClientBankAccount {
+  id       String @id @default(cuid())
+  clientId String
+  iban     String
+  bankName String
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@map("client_bank_accounts")
+}
+
+enum ClientType {
+  PFA
+  SRL
+  II
+  IF
+  SA
+  PERSOANA_FIZICA
+}
+
+// ==================== PRODUCT / SERVICE ====================
+
+model Product {
+  id                    String      @id @default(cuid())
+  companyId             String
+  name                  String
+  description           String?
+  sku                   String?
+  type                  ProductType @default(SERVICE)
+  unitOfMeasure         String      @default("buc")
+  defaultPrice          Float       @default(0)
+  tvaRate               Float       @default(19)
+  currency              String      @default("RON")
+  stockTrackingEnabled  Boolean     @default(false)
+  currentStock          Float       @default(0)
+  minStockAlert         Float?
+  category              String?
+  tags                  String[]    @default([])
+  isActive              Boolean     @default(true)
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  company        Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  invoiceLines   InvoiceLine[]
+  stockMovements StockMovement[]
+  nirLines       NIRLine[]
+
+  @@map("products")
+}
+
+enum ProductType {
+  PRODUCT
+  SERVICE
+}
+
+// ==================== INVOICE ====================
+
+model Invoice {
+  id              String        @id @default(cuid())
+  companyId       String
+  seriesId        String
+  seriesPrefix    String
+  number          Int
+  type            InvoiceType   @default(FACTURA)
+  status          InvoiceStatus @default(DRAFT)
+  clientId        String
+  issueDate       DateTime      @default(now())
+  dueDate         DateTime
+  deliveryDate    DateTime?
+  currency        String        @default("RON")
+  exchangeRate    Float         @default(1)
+  language        String        @default("RO")
+  subtotal        Float         @default(0)
+  tvaAmount       Float         @default(0)
+  total           Float         @default(0)
+  discountTotal   Float         @default(0)
+  notes           String?
+  paymentMethod   PaymentMethod @default(TRANSFER_BANCAR)
+  reverseCharge   Boolean       @default(false)
+  eFacturaStatus  EFacturaStatus @default(NOT_SENT)
+  eFacturaXmlRef  String?
+  isRecurring     Boolean       @default(false)
+  recurringInterval RecurringInterval?
+  nextRecurrenceDate DateTime?
+  pdfUrl          String?
+  stornoOfId      String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  company    Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  series     InvoiceSeries @relation(fields: [seriesId], references: [id])
+  client     Client        @relation(fields: [clientId], references: [id])
+  lines      InvoiceLine[]
+  payments   Payment[]
+
+  @@unique([seriesId, number])
+  @@index([companyId, status])
+  @@index([clientId])
+  @@index([issueDate])
+  @@map("invoices")
+}
+
+model InvoiceLine {
+  id            String       @id @default(cuid())
+  invoiceId     String
+  productId     String?
+  description   String
+  quantity      Float        @default(1)
+  unitOfMeasure String       @default("buc")
+  unitPrice     Float        @default(0)
+  tvaRate       Float        @default(19)
+  tvaAmount     Float        @default(0)
+  lineTotal     Float        @default(0)
+  discountType  DiscountType?
+  discountValue Float?
+  orderIndex    Int          @default(0)
+
+  invoice Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id])
+
+  @@map("invoice_lines")
+}
+
+enum InvoiceType {
+  FACTURA
+  FACTURA_PROFORMA
+  AVIZ_EXPEDITIE
+  CHITANTA
+  NOTA_CREDIT
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  PARTIALLY_PAID
+  OVERDUE
+  CANCELLED
+  STORNO
+}
+
+enum PaymentMethod {
+  TRANSFER_BANCAR
+  NUMERAR
+  CARD
+  OP
+  COMPENSARE
+}
+
+enum EFacturaStatus {
+  NOT_SENT
+  SENT
+  VALIDATED
+  REJECTED
+}
+
+enum RecurringInterval {
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED
+}
+
+// ==================== PAYMENT ====================
+
+model Payment {
+  id              String        @id @default(cuid())
+  companyId       String
+  invoiceId       String
+  clientId        String
+  amount          Float
+  currency        String        @default("RON")
+  exchangeRate    Float         @default(1)
+  paymentDate     DateTime      @default(now())
+  paymentMethod   PaymentMethod @default(TRANSFER_BANCAR)
+  reference       String?
+  receiptSeries   String?
+  receiptNumber   Int?
+  notes           String?
+  createdAt       DateTime      @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  invoice Invoice @relation(fields: [invoiceId], references: [id])
+  client  Client  @relation(fields: [clientId], references: [id])
+
+  @@map("payments")
+}
+
+// ==================== EXPENSE ====================
+
+model Expense {
+  id              String        @id @default(cuid())
+  companyId       String
+  supplierId      String?
+  category        String
+  description     String
+  amount          Float         @default(0)
+  tvaAmount       Float         @default(0)
+  total           Float         @default(0)
+  currency        String        @default("RON")
+  date            DateTime      @default(now())
+  dueDate         DateTime?
+  status          ExpenseStatus @default(PENDING)
+  documentUrl     String?
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  company  Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  supplier Supplier? @relation(fields: [supplierId], references: [id])
+
+  @@map("expenses")
+}
+
+enum ExpenseStatus {
+  PENDING
+  PAID
+}
+
+// ==================== SUPPLIER ====================
+
+model Supplier {
+  id              String   @id @default(cuid())
+  companyId       String
+  name            String
+  cui             String?
+  address         String?
+  contactPerson   String?
+  email           String?
+  phone           String?
+  paymentTermDays Int      @default(30)
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  company      Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  bankAccounts SupplierBankAccount[]
+  expenses     Expense[]
+  nirs         NIR[]
+
+  @@map("suppliers")
+}
+
+model SupplierBankAccount {
+  id         String @id @default(cuid())
+  supplierId String
+  iban       String
+  bankName   String
+
+  supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@map("supplier_bank_accounts")
+}
+
+// ==================== INVENTORY ====================
+
+model Warehouse {
+  id        String  @id @default(cuid())
+  companyId String
+  name      String
+  address   String?
+  isDefault Boolean @default(false)
+
+  company        Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  stockMovements StockMovement[]
+
+  @@map("warehouses")
+}
+
+model StockMovement {
+  id                String            @id @default(cuid())
+  companyId         String
+  productId         String
+  warehouseId       String?
+  type              StockMovementType
+  quantity          Float
+  referenceDocument String?
+  date              DateTime          @default(now())
+  notes             String?
+  createdAt         DateTime          @default(now())
+
+  company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  product   Product    @relation(fields: [productId], references: [id])
+  warehouse Warehouse? @relation(fields: [warehouseId], references: [id])
+
+  @@map("stock_movements")
+}
+
+enum StockMovementType {
+  RECEPTIE
+  VANZARE
+  TRANSFER
+  AJUSTARE
+  RETUR
+}
+
+model NIR {
+  id              String    @id @default(cuid())
+  companyId       String
+  series          String
+  number          Int
+  supplierId      String
+  date            DateTime  @default(now())
+  receptionDate   DateTime?
+  total           Float     @default(0)
+  status          String    @default("DRAFT")
+  linkedInvoiceId String?
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  company  Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  supplier Supplier  @relation(fields: [supplierId], references: [id])
+  lines    NIRLine[]
+
+  @@map("nirs")
+}
+
+model NIRLine {
+  id        String @id @default(cuid())
+  nirId     String
+  productId String
+  quantity  Float
+  unitPrice Float
+  tvaRate   Float  @default(19)
+  total     Float  @default(0)
+
+  nir     NIR     @relation(fields: [nirId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@map("nir_lines")
+}
+
+// ==================== AUDIT LOG ====================
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  companyId  String
+  userId     String
+  action     String
+  entityType String
+  entityId   String
+  details    String?
+  createdAt  DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@index([companyId, entityType])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
