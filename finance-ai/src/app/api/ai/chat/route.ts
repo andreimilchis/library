@@ -15,9 +15,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ response });
   } catch (error) {
     console.error("AI chat error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "AI chat failed" },
-      { status: 500 }
-    );
+    // Return a user-friendly response instead of error status
+    // so the frontend can always display something useful
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    console.error("AI chat error details:", errorMessage);
+    return NextResponse.json({
+      response: `Sorry, I encountered an error: ${errorMessage}. Please try again.`,
+    });
   }
 }

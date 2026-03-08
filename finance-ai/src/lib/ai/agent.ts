@@ -133,11 +133,53 @@ export async function chat(
   userMessage: string
 ): Promise<string> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    return generateFallbackResponse(userMessage);
+
+  // Try to gather financial context (may fail if DB is unavailable)
+  let context: FinancialContext | null = null;
+  try {
+    context = await gatherFinancialContext();
+  } catch (dbError) {
+    console.error("Failed to gather financial context:", dbError);
   }
 
-  const context = await gatherFinancialContext();
+  if (!apiKey) {
+    if (!context) {
+      return "I'm having trouble connecting to the database. Please check your database configuration and try again.";
+    }
+    return generateFallbackResponse(userMessage, context);
+  }
+
+  if (!context) {
+    // Still try Claude without financial data
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1024,
+        system: "You are an AI Financial Agent. The database is temporarily unavailable, so you cannot access the user's financial data right now. Let the user know and offer to help once the connection is restored.",
+        messages: [
+          ...messages.map((m) => ({ role: m.role, content: m.content })),
+          { role: "user", content: userMessage },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`AI API error: ${error}`);
+    }
+
+    const data = (await response.json()) as {
+      content: Array<{ type: string; text: string }>;
+    };
+    return data.content[0]?.text || "I couldn't generate a response.";
+  }
+
   const systemPrompt = buildSystemPrompt(context);
 
   const response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -169,10 +211,8 @@ export async function chat(
   return data.content[0]?.text || "I couldn't generate a response.";
 }
 
-async function generateFallbackResponse(question: string): Promise<string> {
+async function generateFallbackResponse(question: string, context: FinancialContext): Promise<string> {
   const lower = question.toLowerCase();
-
-  const context = await gatherFinancialContext();
 
   if (lower.includes("cheltuieli") || lower.includes("expenses") || lower.includes("spent")) {
     if (lower.includes("săptămân") || lower.includes("week")) {
