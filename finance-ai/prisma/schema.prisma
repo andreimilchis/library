@@ -1,0 +1,230 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ==================== REVOLUT CONNECTION ====================
+
+model RevolutConnection {
+  id            String   @id @default(cuid())
+  accessToken   String
+  refreshToken  String
+  tokenType     String   @default("Bearer")
+  expiresAt     DateTime
+  scope         String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("revolut_connections")
+}
+
+// ==================== ACCOUNTS ====================
+
+model Account {
+  id        String   @id @default(cuid())
+  revolutId String   @unique
+  name      String
+  balance   Float    @default(0)
+  currency  String   @default("RON")
+  state     String   @default("active")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  transactions Transaction[]
+
+  @@map("accounts")
+}
+
+// ==================== CATEGORIES ====================
+
+model Category {
+  id          String  @id @default(cuid())
+  name        String
+  slug        String  @unique
+  type        TransactionDirection
+  parentId    String?
+  icon        String?
+  color       String?
+  isSystem    Boolean @default(false)
+  createdAt   DateTime @default(now())
+
+  parent       Category?     @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children     Category[]    @relation("CategoryHierarchy")
+  transactions Transaction[]
+
+  @@map("categories")
+}
+
+// ==================== LABELS ====================
+
+model Label {
+  id        String @id @default(cuid())
+  name      String @unique
+  color     String?
+  createdAt DateTime @default(now())
+
+  transactions TransactionLabel[]
+
+  @@map("labels")
+}
+
+model TransactionLabel {
+  transactionId String
+  labelId       String
+
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  label       Label       @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@id([transactionId, labelId])
+  @@map("transaction_labels")
+}
+
+// ==================== TRANSACTIONS ====================
+
+model Transaction {
+  id                String               @id @default(cuid())
+  revolutId         String               @unique
+  accountId         String
+  amount            Float
+  currency          String               @default("RON")
+  direction         TransactionDirection
+  merchantName      String?
+  merchantCategory  String?
+  description       String?
+  reference         String?
+  transactionDate   DateTime
+  categoryId        String?
+  isSubscription    Boolean              @default(false)
+  classificationStatus ClassificationStatus @default(PENDING)
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  account      Account            @relation(fields: [accountId], references: [id])
+  category     Category?          @relation(fields: [categoryId], references: [id])
+  labels       TransactionLabel[]
+  subscription Subscription?      @relation(fields: [subscriptionId], references: [id])
+  subscriptionId String?
+
+  @@index([accountId])
+  @@index([transactionDate])
+  @@index([direction])
+  @@index([categoryId])
+  @@index([merchantName])
+  @@map("transactions")
+}
+
+enum TransactionDirection {
+  INCOME
+  EXPENSE
+}
+
+enum ClassificationStatus {
+  PENDING
+  CLASSIFIED
+  NEEDS_REVIEW
+  MANUAL
+}
+
+// ==================== SUBSCRIPTIONS ====================
+
+model Subscription {
+  id              String   @id @default(cuid())
+  merchantName    String
+  amount          Float
+  currency        String   @default("RON")
+  billingCycle    BillingCycle @default(MONTHLY)
+  nextBillingDate DateTime?
+  categoryId      String?
+  isActive        Boolean  @default(true)
+  detectedAt      DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  transactions Transaction[]
+
+  @@map("subscriptions")
+}
+
+enum BillingCycle {
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+// ==================== BUDGETS ====================
+
+model Budget {
+  id         String   @id @default(cuid())
+  name       String
+  categoryId String?
+  amount     Float
+  currency   String   @default("RON")
+  period     BudgetPeriod @default(MONTHLY)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  alerts Alert[]
+
+  @@map("budgets")
+}
+
+enum BudgetPeriod {
+  DAILY
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+// ==================== ALERTS ====================
+
+model Alert {
+  id        String    @id @default(cuid())
+  type      AlertType
+  title     String
+  message   String
+  severity  AlertSeverity @default(INFO)
+  budgetId  String?
+  isRead    Boolean   @default(false)
+  createdAt DateTime  @default(now())
+
+  budget Budget? @relation(fields: [budgetId], references: [id])
+
+  @@index([isRead])
+  @@index([createdAt])
+  @@map("alerts")
+}
+
+enum AlertType {
+  BUDGET_EXCEEDED
+  UNUSUAL_SPENDING
+  LARGE_TRANSACTION
+  SUBSCRIPTION_REMINDER
+  SUBSCRIPTION_DETECTED
+}
+
+enum AlertSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+// ==================== CLASSIFICATION RULES ====================
+
+model ClassificationRule {
+  id            String   @id @default(cuid())
+  merchantPattern String
+  categoryId    String
+  priority      Int      @default(0)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  @@map("classification_rules")
+}
