@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useCallback, useMemo, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
+import dynamic from "next/dynamic";
 import {
   PenLine,
   Type,
@@ -13,12 +14,11 @@ import {
   Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Document, Page, pdfjs } from "react-pdf";
-import "react-pdf/dist/Page/AnnotationLayer.css";
-import "react-pdf/dist/Page/TextLayer.css";
 
-// Set up PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+const PdfViewer = dynamic(
+  () => import("@/components/pdf-viewer").then((mod) => mod.PdfViewer),
+  { ssr: false }
+);
 
 type Signer = {
   id: string;
@@ -87,23 +87,9 @@ export function FieldPlacement({
   const [draggingType, setDraggingType] = useState<string | null>(null);
   const [movingField, setMovingField] = useState<string | null>(null);
   const [moveOffset, setMoveOffset] = useState({ x: 0, y: 0 });
-  const [numPages, setNumPages] = useState<number>(0);
   const [containerWidth, setContainerWidth] = useState<number>(0);
   const canvasRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-
-  // Create object URL from File
-  const fileUrl = useMemo(() => {
-    if (!file) return null;
-    return URL.createObjectURL(file);
-  }, [file]);
-
-  // Clean up object URL on unmount
-  useEffect(() => {
-    return () => {
-      if (fileUrl) URL.revokeObjectURL(fileUrl);
-    };
-  }, [fileUrl]);
 
   // Track container width for responsive PDF rendering
   useEffect(() => {
@@ -187,10 +173,6 @@ export function FieldPlacement({
 
   function getFieldIcon(type: string) {
     return FIELD_TYPES.find((f) => f.type === type)?.icon || AlignLeft;
-  }
-
-  function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
-    setNumPages(numPages);
   }
 
   return (
@@ -285,32 +267,9 @@ export function FieldPlacement({
             <div className="flex min-h-[700px] items-center justify-center" style={{ aspectRatio: "8.5/11" }}>
               <p className="text-muted-foreground">No document uploaded</p>
             </div>
-          ) : fileUrl ? (
-            <Document
-              file={fileUrl}
-              onLoadSuccess={onDocumentLoadSuccess}
-              loading={
-                <div className="flex min-h-[700px] items-center justify-center" style={{ aspectRatio: "8.5/11" }}>
-                  <p className="text-muted-foreground">Loading PDF...</p>
-                </div>
-              }
-              error={
-                <div className="flex min-h-[700px] items-center justify-center" style={{ aspectRatio: "8.5/11" }}>
-                  <p className="text-red-500">Failed to load PDF</p>
-                </div>
-              }
-            >
-              {Array.from(new Array(numPages), (_, index) => (
-                <Page
-                  key={`page_${index + 1}`}
-                  pageNumber={index + 1}
-                  width={containerWidth > 0 ? containerWidth : undefined}
-                  renderTextLayer={false}
-                  renderAnnotationLayer={false}
-                />
-              ))}
-            </Document>
-          ) : null}
+          ) : (
+            <PdfViewer file={file} width={containerWidth} />
+          )}
 
           {/* Placed fields */}
           {fields.map((field) => {
