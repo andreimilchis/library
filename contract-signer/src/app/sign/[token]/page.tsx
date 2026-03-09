@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams } from "next/navigation";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
@@ -9,12 +9,12 @@ import {
   FileText,
   PenLine,
   CheckCircle2,
-  Type,
   AlertCircle,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -48,7 +48,7 @@ type SigningData = {
   }[];
 };
 
-type SignatureMode = "draw" | "type" | "upload";
+type SignatureMode = "draw" | "type";
 
 export default function SigningPage() {
   const params = useParams();
@@ -65,6 +65,7 @@ export default function SigningPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDrawingRef = useRef(false);
   const [numPages, setNumPages] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
   const [pdfContainerWidth, setPdfContainerWidth] = useState(0);
   const pdfContainerRef = useRef<HTMLDivElement>(null);
 
@@ -72,7 +73,8 @@ export default function SigningPage() {
     if (!pdfContainerRef.current) return;
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        setPdfContainerWidth(Math.floor(entry.contentRect.width));
+        const w = Math.floor(entry.contentRect.width);
+        setPdfContainerWidth((prev) => (Math.abs(prev - w) > 1 ? w : prev));
       }
     });
     observer.observe(pdfContainerRef.current);
@@ -251,6 +253,7 @@ export default function SigningPage() {
   const completedFields = data.fields.filter((f) => fieldValues[f.id]).length;
   const totalFields = data.fields.length;
   const allFieldsFilled = completedFields === totalFields;
+  const currentPageFields = data.fields.filter((f) => f.page === currentPage);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -293,44 +296,75 @@ export default function SigningPage() {
           </p>
         </div>
 
-        {/* PDF viewer with fields */}
+        {/* Page navigation */}
+        {numPages > 1 && (
+          <div className="mb-4 flex items-center justify-center gap-3">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="flex h-9 w-9 items-center justify-center rounded-lg border bg-white text-sm shadow-sm transition-colors hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <span className="text-sm font-medium text-muted-foreground">
+              Page {currentPage} of {numPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(numPages, p + 1))}
+              disabled={currentPage === numPages}
+              className="flex h-9 w-9 items-center justify-center rounded-lg border bg-white text-sm shadow-sm transition-colors hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+
+        {/* PDF viewer with fields - single page */}
         <div
           ref={pdfContainerRef}
           className="relative rounded-xl border-2 border-slate-200 bg-white shadow-sm overflow-hidden"
         >
-          <Document
-            file={data.document.originalPdfUrl}
-            onLoadSuccess={({ numPages }) => setNumPages(numPages)}
-            loading={
-              <div
-                className="flex min-h-[700px] items-center justify-center"
-                style={{ aspectRatio: "8.5/11" }}
+          {pdfContainerWidth > 0 ? (
+            <div key={`page_${currentPage}`} className="page-flip">
+              <Document
+                file={data.document.originalPdfUrl}
+                onLoadSuccess={({ numPages: n }) => setNumPages(n)}
+                loading={
+                  <div
+                    className="flex min-h-[700px] items-center justify-center"
+                    style={{ aspectRatio: "8.5/11" }}
+                  >
+                    <p className="text-muted-foreground">Loading PDF...</p>
+                  </div>
+                }
+                error={
+                  <div
+                    className="flex min-h-[700px] items-center justify-center"
+                    style={{ aspectRatio: "8.5/11" }}
+                  >
+                    <p className="text-red-500">Failed to load PDF. The document may not be a valid PDF file.</p>
+                  </div>
+                }
               >
-                <p className="text-muted-foreground">Loading PDF...</p>
-              </div>
-            }
-            error={
-              <div
-                className="flex min-h-[700px] items-center justify-center"
-                style={{ aspectRatio: "8.5/11" }}
-              >
-                <p className="text-red-500">Failed to load PDF. The document may not be a valid PDF file.</p>
-              </div>
-            }
-          >
-            {Array.from(new Array(numPages), (_, index) => (
-              <Page
-                key={`page_${index + 1}`}
-                pageNumber={index + 1}
-                width={pdfContainerWidth || undefined}
-                renderTextLayer={false}
-                renderAnnotationLayer={false}
-              />
-            ))}
-          </Document>
+                <Page
+                  pageNumber={currentPage}
+                  width={pdfContainerWidth || undefined}
+                  renderTextLayer={false}
+                  renderAnnotationLayer={false}
+                />
+              </Document>
+            </div>
+          ) : (
+            <div
+              className="flex min-h-[700px] items-center justify-center"
+              style={{ aspectRatio: "8.5/11" }}
+            >
+              <p className="text-muted-foreground">Loading PDF...</p>
+            </div>
+          )}
 
-          {/* Interactive fields overlaid on PDF */}
-          {data.fields.map((field) => {
+          {/* Interactive fields overlaid on current page - percentage positioned */}
+          {currentPageFields.map((field) => {
             const value = fieldValues[field.id];
             const isSignature = field.type === "SIGNATURE" || field.type === "INITIALS";
             const hasValue = !!value;
@@ -345,10 +379,10 @@ export default function SigningPage() {
                     : "border-blue-400 bg-blue-50 cursor-pointer hover:bg-blue-100"
                 )}
                 style={{
-                  left: field.posX,
-                  top: field.posY,
-                  minWidth: field.width,
-                  minHeight: field.height,
+                  left: `${field.posX}%`,
+                  top: `${field.posY}%`,
+                  width: `${field.width}%`,
+                  height: `${field.height}%`,
                 }}
                 onClick={() => {
                   if (isSignature && !hasValue) {
@@ -391,6 +425,29 @@ export default function SigningPage() {
             );
           })}
         </div>
+
+        {/* Page navigation bottom */}
+        {numPages > 1 && (
+          <div className="mt-4 flex items-center justify-center gap-3">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="flex h-9 w-9 items-center justify-center rounded-lg border bg-white text-sm shadow-sm transition-colors hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <span className="text-sm font-medium text-muted-foreground">
+              Page {currentPage} of {numPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(numPages, p + 1))}
+              disabled={currentPage === numPages}
+              className="flex h-9 w-9 items-center justify-center rounded-lg border bg-white text-sm shadow-sm transition-colors hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Signature Modal */}

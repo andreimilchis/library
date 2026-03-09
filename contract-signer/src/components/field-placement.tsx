@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
-import dynamic from "next/dynamic";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { Document, Page, pdfjs } from "react-pdf";
+import "react-pdf/dist/Page/AnnotationLayer.css";
+import "react-pdf/dist/Page/TextLayer.css";
 import {
   PenLine,
   Type,
@@ -12,13 +14,15 @@ import {
   Briefcase,
   AlignLeft,
   Trash2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const PdfViewer = dynamic(
-  () => import("@/components/pdf-viewer").then((mod) => mod.PdfViewer),
-  { ssr: false }
-);
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  "pdfjs-dist/build/pdf.worker.min.mjs",
+  import.meta.url
+).toString();
 
 type Signer = {
   id: string;
@@ -87,11 +91,18 @@ export function FieldPlacement({
   const [draggingType, setDraggingType] = useState<string | null>(null);
   const [movingField, setMovingField] = useState<string | null>(null);
   const [moveOffset, setMoveOffset] = useState({ x: 0, y: 0 });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [numPages, setNumPages] = useState(0);
   const [containerWidth, setContainerWidth] = useState<number>(0);
+  const [pageHeight, setPageHeight] = useState<number>(0);
   const canvasRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const pageWrapperRef = useRef<HTMLDivElement>(null);
 
-  // Track container width for responsive PDF rendering (debounced to prevent render loops)
+  // Stable blob URL
+  const fileUrl = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
+
+  // Track container width
   useEffect(() => {
     if (!containerRef.current) return;
     let rafId: number;
@@ -111,20 +122,38 @@ export function FieldPlacement({
     };
   }, []);
 
+  // Track rendered page height
+  useEffect(() => {
+    if (!pageWrapperRef.current) return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const h = Math.floor(entry.contentRect.height);
+        if (h > 0) setPageHeight(h);
+      }
+    });
+    observer.observe(pageWrapperRef.current);
+    return () => observer.disconnect();
+  }, [currentPage, numPages]);
+
+  const stableWidth = Math.floor(containerWidth) || undefined;
+
+  // Place or move a field using percentage coordinates
   const handleFieldDrop = useCallback(
     (e: React.MouseEvent) => {
       if (!canvasRef.current || (!draggingType && !movingField)) return;
+      if (!containerWidth || !pageHeight) return;
 
       const rect = canvasRef.current.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
+      const pixelX = e.clientX - rect.left;
+      const pixelY = e.clientY - rect.top;
+      const pctX = (pixelX / containerWidth) * 100;
+      const pctY = (pixelY / pageHeight) * 100;
 
       if (movingField) {
-        // Move existing field
         onFieldsChange(
           fields.map((f) =>
             f.id === movingField
-              ? { ...f, posX: x - moveOffset.x, posY: y - moveOffset.y }
+              ? { ...f, posX: pctX - moveOffset.x, posY: pctY - moveOffset.y }
               : f
           )
         );
@@ -136,22 +165,25 @@ export function FieldPlacement({
         const fieldDef = FIELD_TYPES.find((f) => f.type === draggingType);
         if (!fieldDef) return;
 
+        const widthPct = (fieldDef.width / containerWidth) * 100;
+        const heightPct = (fieldDef.height / pageHeight) * 100;
+
         const newField: PlacedField = {
           id: crypto.randomUUID(),
           type: draggingType,
           signerId: selectedSigner,
-          page: 1,
-          posX: x - fieldDef.width / 2,
-          posY: y - fieldDef.height / 2,
-          width: fieldDef.width,
-          height: fieldDef.height,
+          page: currentPage,
+          posX: Math.max(0, Math.min(100 - widthPct, pctX - widthPct / 2)),
+          posY: Math.max(0, Math.min(100 - heightPct, pctY - heightPct / 2)),
+          width: widthPct,
+          height: heightPct,
         };
 
         onFieldsChange([...fields, newField]);
         setDraggingType(null);
       }
     },
-    [draggingType, movingField, moveOffset, selectedSigner, fields, onFieldsChange]
+    [draggingType, movingField, moveOffset, selectedSigner, fields, onFieldsChange, containerWidth, pageHeight, currentPage]
   );
 
   function removeField(id: string) {
@@ -161,13 +193,15 @@ export function FieldPlacement({
   function startMoveField(
     e: React.MouseEvent,
     fieldId: string,
-    fieldX: number,
-    fieldY: number
+    fieldPctX: number,
+    fieldPctY: number
   ) {
     e.stopPropagation();
-    const offsetX = e.clientX - (canvasRef.current?.getBoundingClientRect().left || 0) - fieldX;
-    const offsetY = e.clientY - (canvasRef.current?.getBoundingClientRect().top || 0) - fieldY;
-    setMoveOffset({ x: offsetX, y: offsetY });
+    if (!canvasRef.current || !containerWidth || !pageHeight) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const clickPctX = ((e.clientX - rect.left) / containerWidth) * 100;
+    const clickPctY = ((e.clientY - rect.top) / pageHeight) * 100;
+    setMoveOffset({ x: clickPctX - fieldPctX, y: clickPctY - fieldPctY });
     setMovingField(fieldId);
   }
 
@@ -182,6 +216,9 @@ export function FieldPlacement({
   function getFieldIcon(type: string) {
     return FIELD_TYPES.find((f) => f.type === type)?.icon || AlignLeft;
   }
+
+  const currentPageFields = fields.filter((f) => f.page === currentPage);
+  const stablePageKey = `page_${currentPage}`;
 
   return (
     <div className="flex gap-4">
@@ -260,6 +297,29 @@ export function FieldPlacement({
 
       {/* PDF Canvas area */}
       <div className="flex-1" ref={containerRef}>
+        {/* Page navigation */}
+        {numPages > 1 && (
+          <div className="mb-3 flex items-center justify-center gap-3">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="flex h-8 w-8 items-center justify-center rounded-lg border bg-white text-sm transition-colors hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <span className="text-sm font-medium text-muted-foreground">
+              Page {currentPage} of {numPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(numPages, p + 1))}
+              disabled={currentPage === numPages}
+              className="flex h-8 w-8 items-center justify-center rounded-lg border bg-white text-sm transition-colors hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+
         <div
           ref={canvasRef}
           onClick={handleFieldDrop}
@@ -270,17 +330,45 @@ export function FieldPlacement({
               : "border-slate-200"
           )}
         >
-          {/* PDF rendering */}
-          {!file ? (
+          {/* PDF rendering - single page */}
+          {!file || !containerWidth ? (
             <div className="flex min-h-[700px] items-center justify-center" style={{ aspectRatio: "8.5/11" }}>
-              <p className="text-muted-foreground">No document uploaded</p>
+              <p className="text-muted-foreground">{!file ? "No document uploaded" : "Loading..."}</p>
             </div>
           ) : (
-            <PdfViewer file={file} width={containerWidth} />
+            <div ref={pageWrapperRef} key={stablePageKey} className="page-flip">
+              <Document
+                file={fileUrl}
+                onLoadSuccess={({ numPages: n }) => setNumPages(n)}
+                loading={
+                  <div
+                    className="flex min-h-[700px] items-center justify-center"
+                    style={{ aspectRatio: "8.5/11" }}
+                  >
+                    <p className="text-muted-foreground">Loading PDF...</p>
+                  </div>
+                }
+                error={
+                  <div
+                    className="flex min-h-[700px] items-center justify-center"
+                    style={{ aspectRatio: "8.5/11" }}
+                  >
+                    <p className="text-red-500">Failed to load PDF</p>
+                  </div>
+                }
+              >
+                <Page
+                  pageNumber={currentPage}
+                  width={stableWidth}
+                  renderTextLayer={false}
+                  renderAnnotationLayer={false}
+                />
+              </Document>
+            </div>
           )}
 
-          {/* Placed fields */}
-          {fields.map((field) => {
+          {/* Placed fields for current page - percentage positioned */}
+          {currentPageFields.map((field) => {
             const signerIdx = getSignerIndex(field.signerId);
             const Icon = getFieldIcon(field.type);
             return (
@@ -292,10 +380,10 @@ export function FieldPlacement({
                   SIGNER_BG_COLORS[signerIdx % SIGNER_BG_COLORS.length]
                 )}
                 style={{
-                  left: field.posX,
-                  top: field.posY,
-                  minWidth: field.width,
-                  minHeight: field.height,
+                  left: `${field.posX}%`,
+                  top: `${field.posY}%`,
+                  width: `${field.width}%`,
+                  height: `${field.height}%`,
                 }}
                 onMouseDown={(e) => startMoveField(e, field.id, field.posX, field.posY)}
               >
