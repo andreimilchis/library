@@ -18,6 +18,8 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
@@ -28,6 +30,7 @@ type Signer = {
   id: string;
   name: string;
   email: string;
+  isSelf?: boolean;
 };
 
 type PlacedField = {
@@ -39,7 +42,10 @@ type PlacedField = {
   posY: number;
   width: number;
   height: number;
+  value?: string;
 };
+
+type SignatureMode = "draw" | "type";
 
 const FIELD_TYPES = [
   { type: "SIGNATURE", label: "Signature", icon: PenLine, width: 200, height: 60 },
@@ -76,6 +82,16 @@ const SIGNER_BG_COLORS = [
   "bg-pink-50",
 ];
 
+const SIGNER_TEXT_COLORS = [
+  "text-blue-700",
+  "text-green-700",
+  "text-purple-700",
+  "text-orange-700",
+  "text-pink-700",
+];
+
+type ResizeHandle = "nw" | "ne" | "sw" | "se";
+
 export function FieldPlacement({
   file,
   signers,
@@ -95,12 +111,35 @@ export function FieldPlacement({
   const [numPages, setNumPages] = useState(0);
   const [containerWidth, setContainerWidth] = useState<number>(0);
   const [pageHeight, setPageHeight] = useState<number>(0);
+  const [selectedField, setSelectedField] = useState<string | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
+
+  // Resize state
+  const resizingRef = useRef<{
+    fieldId: string;
+    handle: ResizeHandle;
+    startMouseX: number;
+    startMouseY: number;
+    startPosX: number;
+    startPosY: number;
+    startWidth: number;
+    startHeight: number;
+  } | null>(null);
+  const [isResizing, setIsResizing] = useState(false);
+
+  // Signature modal for "Me" signer
+  const [showSignatureModal, setShowSignatureModal] = useState(false);
+  const [pendingFieldId, setPendingFieldId] = useState<string | null>(null);
+  const [signatureMode, setSignatureMode] = useState<SignatureMode>("draw");
+  const [typedSignature, setTypedSignature] = useState("");
+  const [savedSignature, setSavedSignature] = useState<string | null>(null);
+  const signatureCanvasRef = useRef<HTMLCanvasElement>(null);
+  const isDrawingRef = useRef(false);
 
   // Stable blob URL
   const fileUrl = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
 
-  // Track canvas content dimensions (excluding borders) - must match CSS percentage reference
+  // Track canvas content dimensions
   useEffect(() => {
     if (!canvasRef.current) return;
     let rafId: number;
@@ -124,7 +163,75 @@ export function FieldPlacement({
 
   const stableWidth = Math.floor(containerWidth) || undefined;
 
-  // Place or move a field using percentage coordinates
+  // Document-level resize handler
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      const r = resizingRef.current;
+      if (!r || !containerWidth || !pageHeight) return;
+
+      const deltaPctX = ((e.clientX - r.startMouseX) / containerWidth) * 100;
+      const deltaPctY = ((e.clientY - r.startMouseY) / pageHeight) * 100;
+
+      const minW = 3;
+      const minH = 1.5;
+
+      let posX = r.startPosX;
+      let posY = r.startPosY;
+      let width = r.startWidth;
+      let height = r.startHeight;
+
+      switch (r.handle) {
+        case "se":
+          width = Math.max(minW, r.startWidth + deltaPctX);
+          height = Math.max(minH, r.startHeight + deltaPctY);
+          break;
+        case "sw":
+          posX = r.startPosX + deltaPctX;
+          width = Math.max(minW, r.startWidth - deltaPctX);
+          height = Math.max(minH, r.startHeight + deltaPctY);
+          if (width <= minW) posX = r.startPosX + r.startWidth - minW;
+          break;
+        case "ne":
+          posY = r.startPosY + deltaPctY;
+          width = Math.max(minW, r.startWidth + deltaPctX);
+          height = Math.max(minH, r.startHeight - deltaPctY);
+          if (height <= minH) posY = r.startPosY + r.startHeight - minH;
+          break;
+        case "nw":
+          posX = r.startPosX + deltaPctX;
+          posY = r.startPosY + deltaPctY;
+          width = Math.max(minW, r.startWidth - deltaPctX);
+          height = Math.max(minH, r.startHeight - deltaPctY);
+          if (width <= minW) posX = r.startPosX + r.startWidth - minW;
+          if (height <= minH) posY = r.startPosY + r.startHeight - minH;
+          break;
+      }
+
+      onFieldsChange(
+        fields.map((f) =>
+          f.id === r.fieldId ? { ...f, posX: posX, posY: posY, width, height } : f
+        )
+      );
+    };
+
+    const handleMouseUp = () => {
+      if (resizingRef.current) {
+        resizingRef.current = null;
+        setIsResizing(false);
+      }
+    };
+
+    if (isResizing) {
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+      return () => {
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+      };
+    }
+  }, [isResizing, containerWidth, pageHeight, fields, onFieldsChange]);
+
+  // Place or move a field
   const handleFieldDrop = useCallback(
     (e: React.MouseEvent) => {
       if (!canvasRef.current || (!draggingType && !movingField)) return;
@@ -158,8 +265,18 @@ export function FieldPlacement({
         const widthPct = (fieldDef.width / containerWidth) * 100;
         const heightPct = (fieldDef.height / pageHeight) * 100;
 
+        const newFieldId = crypto.randomUUID();
+        const isSelfSigner = signers.find((s) => s.id === selectedSigner)?.isSelf;
+        const isSignatureType = draggingType === "SIGNATURE" || draggingType === "INITIALS";
+
+        // For self-signer signature fields, check if we have a saved signature
+        let prefillValue: string | undefined;
+        if (isSelfSigner && isSignatureType && savedSignature) {
+          prefillValue = savedSignature;
+        }
+
         const newField: PlacedField = {
-          id: crypto.randomUUID(),
+          id: newFieldId,
           type: draggingType,
           signerId: selectedSigner,
           page: currentPage,
@@ -167,17 +284,40 @@ export function FieldPlacement({
           posY: Math.max(0, Math.min(100 - heightPct, pctY - heightPct / 2)),
           width: widthPct,
           height: heightPct,
+          value: prefillValue,
         };
 
         onFieldsChange([...fields, newField]);
+        setSelectedField(newFieldId);
         setDraggingType(null);
+
+        // If self-signer + signature + no saved signature => open modal
+        if (isSelfSigner && isSignatureType && !savedSignature) {
+          setPendingFieldId(newFieldId);
+          setShowSignatureModal(true);
+          setSignatureMode("draw");
+          setTypedSignature("");
+        }
       }
     },
-    [draggingType, movingField, moveOffset, selectedSigner, fields, onFieldsChange, containerWidth, pageHeight, currentPage]
+    [draggingType, movingField, moveOffset, selectedSigner, fields, onFieldsChange, containerWidth, pageHeight, currentPage, signers, savedSignature]
+  );
+
+  // Canvas click - deselect field if clicking on empty area
+  const handleCanvasClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (draggingType || movingField) {
+        handleFieldDrop(e);
+      } else {
+        setSelectedField(null);
+      }
+    },
+    [draggingType, movingField, handleFieldDrop]
   );
 
   function removeField(id: string) {
     onFieldsChange(fields.filter((f) => f.id !== id));
+    if (selectedField === id) setSelectedField(null);
   }
 
   function startMoveField(
@@ -198,6 +338,25 @@ export function FieldPlacement({
     setMovingField(fieldId);
   }
 
+  function startResize(e: React.MouseEvent, fieldId: string, handle: ResizeHandle) {
+    e.stopPropagation();
+    e.preventDefault();
+    const field = fields.find((f) => f.id === fieldId);
+    if (!field) return;
+
+    resizingRef.current = {
+      fieldId,
+      handle,
+      startMouseX: e.clientX,
+      startMouseY: e.clientY,
+      startPosX: field.posX,
+      startPosY: field.posY,
+      startWidth: field.width,
+      startHeight: field.height,
+    };
+    setIsResizing(true);
+  }
+
   function getSignerIndex(signerId: string) {
     return signers.findIndex((s) => s.id === signerId);
   }
@@ -210,16 +369,90 @@ export function FieldPlacement({
     return FIELD_TYPES.find((f) => f.type === type)?.icon || AlignLeft;
   }
 
+  // Signature canvas helpers
+  function initSignatureCanvas() {
+    const canvas = signatureCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = "#1a1a1a";
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+  }
+
+  function startDrawing(e: React.MouseEvent<HTMLCanvasElement>) {
+    isDrawingRef.current = true;
+    const canvas = signatureCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const rect = canvas.getBoundingClientRect();
+    ctx.beginPath();
+    ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+  }
+
+  function draw(e: React.MouseEvent<HTMLCanvasElement>) {
+    if (!isDrawingRef.current) return;
+    const canvas = signatureCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const rect = canvas.getBoundingClientRect();
+    ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+    ctx.stroke();
+  }
+
+  function stopDrawing() {
+    isDrawingRef.current = false;
+  }
+
+  function applySignature() {
+    let signatureValue = "";
+
+    if (signatureMode === "draw" && signatureCanvasRef.current) {
+      signatureValue = signatureCanvasRef.current.toDataURL("image/png");
+    } else if (signatureMode === "type" && typedSignature) {
+      signatureValue = `typed:${typedSignature}`;
+    }
+
+    if (signatureValue && pendingFieldId) {
+      setSavedSignature(signatureValue);
+      // Update the pending field and any other self-signer signature fields without values
+      const selfSigner = signers.find((s) => s.isSelf);
+      onFieldsChange(
+        fields.map((f) => {
+          if (f.id === pendingFieldId) {
+            return { ...f, value: signatureValue };
+          }
+          // Also fill other unfilled self-signer signature fields
+          if (
+            selfSigner &&
+            f.signerId === selfSigner.id &&
+            (f.type === "SIGNATURE" || f.type === "INITIALS") &&
+            !f.value
+          ) {
+            return { ...f, value: signatureValue };
+          }
+          return f;
+        })
+      );
+    }
+    setShowSignatureModal(false);
+    setPendingFieldId(null);
+  }
+
   const currentPageFields = fields.filter((f) => f.page === currentPage);
   const stablePageKey = `page_${currentPage}`;
 
   return (
     <div className="flex gap-4">
-      {/* Left sidebar - Field types */}
+      {/* Left sidebar */}
       <div className="w-56 flex-shrink-0 space-y-4">
         {/* Signer selector */}
         <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase text-muted-foreground">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
             Assigning fields to
           </p>
           <div className="space-y-1">
@@ -228,19 +461,26 @@ export function FieldPlacement({
                 key={signer.id}
                 onClick={() => setSelectedSigner(signer.id)}
                 className={cn(
-                  "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors",
+                  "flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm transition-all",
                   selectedSigner === signer.id
-                    ? `${SIGNER_BG_COLORS[i % SIGNER_BG_COLORS.length]} ${SIGNER_BORDER_COLORS[i % SIGNER_BORDER_COLORS.length]} border`
-                    : "hover:bg-slate-50"
+                    ? `${SIGNER_BG_COLORS[i % SIGNER_BG_COLORS.length]} ${SIGNER_BORDER_COLORS[i % SIGNER_BORDER_COLORS.length]} border shadow-sm`
+                    : "hover:bg-slate-50 border border-transparent"
                 )}
               >
                 <div
                   className={cn(
-                    "h-3 w-3 rounded-full",
+                    "h-3 w-3 rounded-full flex-shrink-0",
                     SIGNER_COLORS[i % SIGNER_COLORS.length]
                   )}
                 />
-                <span className="truncate font-medium">{signer.name || `Signer ${i + 1}`}</span>
+                <span className={cn(
+                  "truncate font-medium",
+                  selectedSigner === signer.id
+                    ? SIGNER_TEXT_COLORS[i % SIGNER_TEXT_COLORS.length]
+                    : ""
+                )}>
+                  {signer.isSelf ? "Me (now)" : signer.name || `Signer ${i + 1}`}
+                </span>
               </button>
             ))}
           </div>
@@ -248,20 +488,20 @@ export function FieldPlacement({
 
         {/* Field types */}
         <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase text-muted-foreground">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
             Drag fields onto document
           </p>
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             {FIELD_TYPES.map((field) => {
               const Icon = field.icon;
               return (
                 <button
                   key={field.type}
                   onMouseDown={() => setDraggingType(field.type)}
-                  className="flex w-full items-center gap-2 rounded-lg border border-dashed border-transparent px-3 py-2 text-sm transition-colors hover:border-primary/30 hover:bg-primary/5 cursor-grab active:cursor-grabbing"
+                  className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-all hover:bg-slate-100 cursor-grab active:cursor-grabbing active:bg-slate-200 active:scale-[0.98]"
                 >
-                  <Icon className="h-4 w-4 text-muted-foreground" />
-                  {field.label}
+                  <Icon className="h-4 w-4 text-slate-500" />
+                  <span className="font-medium text-slate-700">{field.label}</span>
                 </button>
               );
             })}
@@ -269,19 +509,21 @@ export function FieldPlacement({
         </div>
 
         {/* Summary */}
-        <div className="rounded-lg bg-slate-50 p-3">
-          <p className="text-xs font-semibold uppercase text-muted-foreground">
+        <div className="rounded-lg border bg-slate-50/50 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
             Fields placed
           </p>
           {signers.map((signer, i) => {
             const count = fields.filter((f) => f.signerId === signer.id).length;
             return (
-              <div key={signer.id} className="mt-2 flex items-center justify-between text-sm">
+              <div key={signer.id} className="flex items-center justify-between py-1 text-sm">
                 <div className="flex items-center gap-2">
                   <div className={cn("h-2.5 w-2.5 rounded-full", SIGNER_COLORS[i % SIGNER_COLORS.length])} />
-                  <span className="truncate">{signer.name || `Signer ${i + 1}`}</span>
+                  <span className="truncate text-slate-600">
+                    {signer.isSelf ? "Me (now)" : signer.name || `Signer ${i + 1}`}
+                  </span>
                 </div>
-                <span className="text-muted-foreground">{count}</span>
+                <span className="font-medium text-slate-500">{count}</span>
               </div>
             );
           })}
@@ -315,15 +557,15 @@ export function FieldPlacement({
 
         <div
           ref={canvasRef}
-          onClick={handleFieldDrop}
+          onClick={handleCanvasClick}
           className={cn(
-            "relative rounded-xl border-2 bg-white shadow-sm overflow-hidden",
+            "relative rounded-xl border-2 bg-white shadow-sm overflow-hidden transition-colors",
             draggingType || movingField
               ? "border-primary/50 cursor-crosshair"
               : "border-slate-200"
           )}
         >
-          {/* PDF rendering - single page */}
+          {/* PDF rendering */}
           {!file ? (
             <div className="flex items-center justify-center" style={{ aspectRatio: "8.5/11" }}>
               <p className="text-muted-foreground">No document uploaded</p>
@@ -335,18 +577,12 @@ export function FieldPlacement({
                   file={fileUrl}
                   onLoadSuccess={({ numPages: n }) => setNumPages(n)}
                   loading={
-                    <div
-                      className="flex items-center justify-center"
-                      style={{ aspectRatio: "8.5/11" }}
-                    >
+                    <div className="flex items-center justify-center" style={{ aspectRatio: "8.5/11" }}>
                       <p className="text-muted-foreground">Loading PDF...</p>
                     </div>
                   }
                   error={
-                    <div
-                      className="flex items-center justify-center"
-                      style={{ aspectRatio: "8.5/11" }}
-                    >
+                    <div className="flex items-center justify-center" style={{ aspectRatio: "8.5/11" }}>
                       <p className="text-red-500">Failed to load PDF</p>
                     </div>
                   }
@@ -362,17 +598,28 @@ export function FieldPlacement({
             </div>
           )}
 
-          {/* Placed fields for current page - percentage positioned */}
+          {/* Placed fields */}
           {currentPageFields.map((field) => {
             const signerIdx = getSignerIndex(field.signerId);
             const Icon = getFieldIcon(field.type);
+            const isSelected = selectedField === field.id;
+            const isSignatureType = field.type === "SIGNATURE" || field.type === "INITIALS";
+            const hasSignaturePreview = isSignatureType && field.value;
+            const signer = signers.find((s) => s.id === field.signerId);
+
             return (
               <div
                 key={field.id}
                 className={cn(
-                  "absolute flex items-center gap-1 rounded border-2 px-2 py-1 text-xs font-medium shadow-sm cursor-move select-none",
-                  SIGNER_BORDER_COLORS[signerIdx % SIGNER_BORDER_COLORS.length],
-                  SIGNER_BG_COLORS[signerIdx % SIGNER_BG_COLORS.length]
+                  "absolute rounded border-2 text-xs font-medium shadow-sm select-none transition-shadow",
+                  isSelected
+                    ? "border-primary ring-2 ring-primary/20 z-20"
+                    : cn(
+                        SIGNER_BORDER_COLORS[signerIdx % SIGNER_BORDER_COLORS.length],
+                        "z-10"
+                      ),
+                  SIGNER_BG_COLORS[signerIdx % SIGNER_BG_COLORS.length],
+                  !isResizing && "cursor-move"
                 )}
                 style={{
                   left: `${field.posX}%`,
@@ -380,33 +627,184 @@ export function FieldPlacement({
                   width: `${field.width}%`,
                   height: `${field.height}%`,
                 }}
-                onMouseDown={(e) => startMoveField(e, field.id, field.posX, field.posY)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedField(field.id);
+                }}
+                onMouseDown={(e) => {
+                  if (isResizing) return;
+                  setSelectedField(field.id);
+                  startMoveField(e, field.id, field.posX, field.posY);
+                }}
               >
-                <Icon className="h-3 w-3 flex-shrink-0" />
-                <span className="truncate">{getFieldLabel(field.type)}</span>
+                {/* Field content */}
+                <div className="flex h-full items-center gap-1 overflow-hidden px-1.5">
+                  {hasSignaturePreview ? (
+                    field.value!.startsWith("typed:") ? (
+                      <span className="w-full text-center italic text-sm truncate">
+                        {field.value!.replace("typed:", "")}
+                      </span>
+                    ) : (
+                      <img
+                        src={field.value!}
+                        alt="Signature"
+                        className="h-full w-full object-contain"
+                        draggable={false}
+                      />
+                    )
+                  ) : (
+                    <>
+                      <Icon className="h-3 w-3 flex-shrink-0 opacity-60" />
+                      <span className="truncate">
+                        {getFieldLabel(field.type)}
+                        {signer?.isSelf ? " (me)" : ""}
+                      </span>
+                    </>
+                  )}
+                </div>
+
+                {/* Delete button - always visible on hover, always on selected */}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     removeField(field.id);
                   }}
-                  className="ml-auto flex-shrink-0 rounded p-0.5 hover:bg-red-100"
+                  className={cn(
+                    "absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white shadow transition-opacity",
+                    isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                  )}
+                  style={{ opacity: isSelected ? 1 : undefined }}
+                  onMouseDown={(e) => e.stopPropagation()}
                 >
-                  <Trash2 className="h-3 w-3 text-red-500" />
+                  <Trash2 className="h-3 w-3" />
                 </button>
+
+                {/* Resize handles - visible when selected */}
+                {isSelected && (
+                  <>
+                    {(["nw", "ne", "sw", "se"] as ResizeHandle[]).map((handle) => (
+                      <div
+                        key={handle}
+                        className={cn(
+                          "absolute h-3 w-3 rounded-full border-2 border-primary bg-white shadow-sm z-30",
+                          handle === "nw" && "-left-1.5 -top-1.5 cursor-nw-resize",
+                          handle === "ne" && "-right-1.5 -top-1.5 cursor-ne-resize",
+                          handle === "sw" && "-left-1.5 -bottom-1.5 cursor-sw-resize",
+                          handle === "se" && "-right-1.5 -bottom-1.5 cursor-se-resize"
+                        )}
+                        onMouseDown={(e) => startResize(e, field.id, handle)}
+                      />
+                    ))}
+                  </>
+                )}
               </div>
             );
           })}
 
           {/* Drop indicator */}
           {(draggingType || movingField) && (
-            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-              <p className="rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary">
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-primary/[0.02]">
+              <p className="rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary backdrop-blur-sm">
                 Click to place {draggingType ? getFieldLabel(draggingType) : "field"}
               </p>
             </div>
           )}
         </div>
       </div>
+
+      {/* Signature Modal for "Me" signer */}
+      {showSignatureModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="mx-4 w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+            <h3 className="mb-1 text-lg font-semibold">Add your signature</h3>
+            <p className="mb-4 text-sm text-muted-foreground">
+              This signature will be saved and applied to all your signature fields.
+            </p>
+
+            {/* Mode tabs */}
+            <div className="mb-4 flex gap-1 rounded-lg bg-slate-100 p-1">
+              {(["draw", "type"] as SignatureMode[]).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setSignatureMode(mode)}
+                  className={cn(
+                    "flex-1 rounded-md px-3 py-2 text-sm font-medium transition-all",
+                    signatureMode === mode
+                      ? "bg-white shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {mode === "draw" ? "Draw" : "Type"}
+                </button>
+              ))}
+            </div>
+
+            {/* Draw mode */}
+            {signatureMode === "draw" && (
+              <div className="space-y-3">
+                <canvas
+                  ref={(el) => {
+                    (signatureCanvasRef as React.MutableRefObject<HTMLCanvasElement | null>).current = el;
+                    if (el) initSignatureCanvas();
+                  }}
+                  width={400}
+                  height={150}
+                  onMouseDown={startDrawing}
+                  onMouseMove={draw}
+                  onMouseUp={stopDrawing}
+                  onMouseLeave={stopDrawing}
+                  className="w-full cursor-crosshair rounded-lg border-2 border-dashed border-slate-300 bg-slate-50/50"
+                />
+                <button
+                  onClick={initSignatureCanvas}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Clear
+                </button>
+              </div>
+            )}
+
+            {/* Type mode */}
+            {signatureMode === "type" && (
+              <div className="space-y-3">
+                <Input
+                  value={typedSignature}
+                  onChange={(e) => setTypedSignature(e.target.value)}
+                  placeholder="Type your full name"
+                  className="text-lg"
+                  autoFocus
+                />
+                {typedSignature && (
+                  <div className="flex h-20 items-center justify-center rounded-lg bg-slate-50 border text-2xl italic text-slate-700">
+                    {typedSignature}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="mt-6 flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setShowSignatureModal(false);
+                  // Remove the pending field if no signature
+                  if (pendingFieldId) {
+                    onFieldsChange(fields.filter((f) => f.id !== pendingFieldId));
+                    setPendingFieldId(null);
+                  }
+                }}
+              >
+                Cancel
+              </Button>
+              <Button className="flex-1" onClick={applySignature}>
+                Apply signature
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

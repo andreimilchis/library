@@ -54,6 +54,7 @@ export async function POST(request: NextRequest) {
     id: string;
     name: string;
     email: string;
+    isSelf?: boolean;
   }[];
   const fields = JSON.parse(fieldsJson) as {
     id: string;
@@ -64,6 +65,7 @@ export async function POST(request: NextRequest) {
     posY: number;
     width: number;
     height: number;
+    value?: string;
   }[];
 
   // Upload file
@@ -83,7 +85,9 @@ export async function POST(request: NextRequest) {
           name: s.name,
           email: s.email,
           order: i,
-          status: "PENDING",
+          // Self-signer is immediately SIGNED
+          status: s.isSelf ? "SIGNED" : "PENDING",
+          signedAt: s.isSelf ? new Date() : undefined,
         })),
       },
     },
@@ -98,19 +102,24 @@ export async function POST(request: NextRequest) {
     signerIdMap.set(clientSigner.id, document.signers[i].id);
   });
 
-  // Create fields with correct signer IDs
+  // Create fields with correct signer IDs and pre-filled values for self-signer
   if (fields.length > 0) {
     await prisma.documentField.createMany({
-      data: fields.map((f) => ({
-        documentId: document.id,
-        signerId: signerIdMap.get(f.signerId) || document.signers[0].id,
-        type: f.type as "SIGNATURE" | "INITIALS" | "DATE_SIGNED" | "FULL_NAME" | "EMAIL" | "COMPANY" | "TITLE" | "TEXT",
-        page: f.page,
-        posX: f.posX,
-        posY: f.posY,
-        width: f.width,
-        height: f.height,
-      })),
+      data: fields.map((f) => {
+        const clientSigner = signers.find((s) => s.id === f.signerId);
+        return {
+          documentId: document.id,
+          signerId: signerIdMap.get(f.signerId) || document.signers[0].id,
+          type: f.type as "SIGNATURE" | "INITIALS" | "DATE_SIGNED" | "FULL_NAME" | "EMAIL" | "COMPANY" | "TITLE" | "TEXT",
+          page: f.page,
+          posX: f.posX,
+          posY: f.posY,
+          width: f.width,
+          height: f.height,
+          // Pre-fill value for self-signer fields
+          value: clientSigner?.isSelf ? (f.value || null) : null,
+        };
+      }),
     });
   }
 
@@ -123,15 +132,39 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  // Send signing emails
+  // Handle self-signer audit log
+  const selfSigner = signers.find((s) => s.isSelf);
+  if (selfSigner) {
+    const dbSelfSigner = document.signers.find(
+      (s) => s.id === signerIdMap.get(selfSigner.id)
+    );
+    if (dbSelfSigner) {
+      await prisma.documentAuditLog.create({
+        data: {
+          documentId: document.id,
+          signerId: dbSelfSigner.id,
+          action: "Document signed",
+          details: `${selfSigner.name} (sender) signed the document`,
+        },
+      });
+    }
+  }
+
+  // Send signing emails (skip self-signer)
   const senderName = session.user.name || "NETkyu";
-  for (const signer of document.signers) {
+  for (let i = 0; i < signers.length; i++) {
+    const clientSigner = signers[i];
+    const dbSigner = document.signers[i];
+
+    // Skip sending email to self-signer
+    if (clientSigner.isSelf) continue;
+
     try {
       await sendSigningEmail(
-        signer.name,
-        signer.email,
+        dbSigner.name,
+        dbSigner.email,
         name,
-        signer.signingToken,
+        dbSigner.signingToken,
         senderName,
         message || undefined
       );
@@ -139,21 +172,47 @@ export async function POST(request: NextRequest) {
       await prisma.documentAuditLog.create({
         data: {
           documentId: document.id,
-          signerId: signer.id,
+          signerId: dbSigner.id,
           action: "Signing email sent",
-          details: `Email sent to ${signer.email}`,
+          details: `Email sent to ${dbSigner.email}`,
         },
       });
     } catch (error) {
-      console.error(`Failed to send email to ${signer.email}:`, error);
+      console.error(`Failed to send email to ${dbSigner.email}:`, error);
       await prisma.documentAuditLog.create({
         data: {
           documentId: document.id,
-          signerId: signer.id,
+          signerId: dbSigner.id,
           action: "Email delivery failed",
-          details: `Failed to send email to ${signer.email}`,
+          details: `Failed to send email to ${dbSigner.email}`,
         },
       });
+    }
+  }
+
+  // Check if all signers are already signed (e.g., only self-signer)
+  const pendingSigners = document.signers.filter((s) => s.status === "PENDING");
+  if (pendingSigners.length === 0) {
+    // All signed - complete document
+    await prisma.document.update({
+      where: { id: document.id },
+      data: { status: "COMPLETED" },
+    });
+
+    await prisma.documentAuditLog.create({
+      data: {
+        documentId: document.id,
+        action: "Document completed",
+        details: "All signers have signed the document",
+      },
+    });
+
+    // Generate signed PDF
+    try {
+      const { generateSignedPdf } = await import("@/lib/pdf-generator");
+      await generateSignedPdf(document.id);
+    } catch (error) {
+      console.error("Failed to generate signed PDF:", error);
     }
   }
 

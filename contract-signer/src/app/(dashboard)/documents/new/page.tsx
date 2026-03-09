@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Upload,
@@ -13,8 +13,8 @@ import {
   Plus,
   FileText,
   CheckCircle2,
-  GripVertical,
   Trash2,
+  UserCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +28,7 @@ type Signer = {
   id: string;
   name: string;
   email: string;
+  isSelf?: boolean;
 };
 
 type PlacedField = {
@@ -39,6 +40,7 @@ type PlacedField = {
   posY: number;
   width: number;
   height: number;
+  value?: string;
 };
 
 const STEPS = [
@@ -53,12 +55,17 @@ export default function NewDocumentPage() {
   const [step, setStep] = useState(1);
   const [sending, setSending] = useState(false);
 
+  // Current user info
+  const [currentUser, setCurrentUser] = useState<{ id: string; name: string; email: string } | null>(null);
+
   // Step 1 - Document
   const [file, setFile] = useState<File | null>(null);
   const [documentName, setDocumentName] = useState("");
   const [dragOver, setDragOver] = useState(false);
 
   // Step 2 - Signers
+  const [includeSelf, setIncludeSelf] = useState(false);
+  const selfSignerId = "self-signer";
   const [signers, setSigners] = useState<Signer[]>([
     { id: crypto.randomUUID(), name: "", email: "" },
   ]);
@@ -68,6 +75,24 @@ export default function NewDocumentPage() {
 
   // Step 4 - Message
   const [message, setMessage] = useState("");
+
+  // Fetch current user info
+  useEffect(() => {
+    fetch("/api/me")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.name) setCurrentUser(data);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Build the complete signers list including self
+  const allSigners: Signer[] = includeSelf && currentUser
+    ? [
+        { id: selfSignerId, name: currentUser.name, email: currentUser.email, isSelf: true },
+        ...signers,
+      ]
+    : signers;
 
   // File handling
   const handleFileDrop = useCallback(
@@ -117,6 +142,14 @@ export default function NewDocumentPage() {
     );
   }
 
+  function toggleSelf() {
+    if (includeSelf) {
+      // Remove self - also remove fields assigned to self
+      setFields(fields.filter((f) => f.signerId !== selfSignerId));
+    }
+    setIncludeSelf(!includeSelf);
+  }
+
   // Validation
   function canProceed() {
     switch (step) {
@@ -124,8 +157,9 @@ export default function NewDocumentPage() {
         return file !== null && documentName.trim() !== "";
       case 2:
         return (
-          signers.length > 0 &&
-          signers.every((s) => s.name.trim() && s.email.trim())
+          allSigners.length > 0 &&
+          signers.every((s) => s.name.trim() && s.email.trim()) &&
+          (includeSelf ? !!currentUser : true)
         );
       case 3:
         return fields.length > 0;
@@ -142,12 +176,11 @@ export default function NewDocumentPage() {
     setSending(true);
 
     try {
-      // Upload file
       const formData = new FormData();
       formData.append("file", file);
       formData.append("name", documentName);
       formData.append("message", message);
-      formData.append("signers", JSON.stringify(signers));
+      formData.append("signers", JSON.stringify(allSigners));
       formData.append("fields", JSON.stringify(fields));
 
       const res = await fetch("/api/documents", {
@@ -315,12 +348,59 @@ export default function NewDocumentPage() {
               </Button>
             </div>
 
+            {/* Self-signer toggle */}
+            <Card className={cn(
+              "transition-colors",
+              includeSelf ? "border-blue-300 bg-blue-50/50" : ""
+            )}>
+              <CardContent className="flex items-center gap-4 p-4">
+                <div className={cn(
+                  "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full transition-colors",
+                  includeSelf ? "bg-blue-100" : "bg-slate-100"
+                )}>
+                  <UserCircle className={cn(
+                    "h-5 w-5",
+                    includeSelf ? "text-blue-600" : "text-slate-400"
+                  )} />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium">
+                    {currentUser ? currentUser.name : "Loading..."}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {includeSelf
+                      ? "You will sign this document before sending"
+                      : "Click to add yourself as a signer"}
+                  </p>
+                </div>
+                <Button
+                  variant={includeSelf ? "default" : "outline"}
+                  size="sm"
+                  onClick={toggleSelf}
+                  className="gap-2"
+                >
+                  {includeSelf ? (
+                    <>
+                      <CheckCircle2 className="h-4 w-4" />
+                      Me (now)
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4" />
+                      I need to sign
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* External signers */}
             <div className="space-y-3">
               {signers.map((signer, index) => (
                 <Card key={signer.id}>
                   <CardContent className="flex items-start gap-4 p-4">
                     <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-                      {index + 1}
+                      {(includeSelf ? index + 2 : index + 1)}
                     </div>
                     <div className="flex-1 space-y-3">
                       <div className="grid grid-cols-2 gap-3">
@@ -368,7 +448,7 @@ export default function NewDocumentPage() {
         {step === 3 && (
           <FieldPlacement
             file={file}
-            signers={signers}
+            signers={allSigners}
             fields={fields}
             onFieldsChange={setFields}
           />
@@ -384,7 +464,6 @@ export default function NewDocumentPage() {
               </p>
             </div>
 
-            {/* Summary */}
             <div className="space-y-4">
               <Card>
                 <CardContent className="p-4">
@@ -405,18 +484,34 @@ export default function NewDocumentPage() {
               <Card>
                 <CardContent className="p-4 space-y-3">
                   <p className="text-sm font-medium text-muted-foreground">
-                    SIGNERS ({signers.length})
+                    SIGNERS ({allSigners.length})
                   </p>
-                  {signers.map((signer, i) => (
+                  {allSigners.map((signer, i) => (
                     <div
                       key={signer.id}
                       className="flex items-center gap-3 rounded-lg bg-slate-50 p-3"
                     >
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-                        {i + 1}
+                      <div className={cn(
+                        "flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold",
+                        signer.isSelf
+                          ? "bg-blue-100 text-blue-700"
+                          : "bg-primary/10 text-primary"
+                      )}>
+                        {signer.isSelf ? (
+                          <UserCircle className="h-4 w-4" />
+                        ) : (
+                          i + 1
+                        )}
                       </div>
                       <div>
-                        <p className="text-sm font-medium">{signer.name}</p>
+                        <p className="text-sm font-medium">
+                          {signer.name}
+                          {signer.isSelf && (
+                            <span className="ml-2 text-xs font-normal text-blue-600">
+                              (me - signs now)
+                            </span>
+                          )}
+                        </p>
                         <p className="text-xs text-muted-foreground">
                           {signer.email}
                         </p>
