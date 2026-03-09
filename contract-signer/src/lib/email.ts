@@ -1,15 +1,43 @@
 import nodemailer from "nodemailer";
 import { getAppUrl } from "./utils";
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || "smtp.resend.com",
-  port: parseInt(process.env.SMTP_PORT || "465"),
-  secure: true,
-  auth: {
-    user: process.env.SMTP_USER || "resend",
-    pass: process.env.SMTP_PASS || "",
-  },
-});
+let transporterPromise: Promise<nodemailer.Transporter>;
+
+function getTransporter(): Promise<nodemailer.Transporter> {
+  if (!transporterPromise) {
+    transporterPromise = createTransporter();
+  }
+  return transporterPromise;
+}
+
+async function createTransporter(): Promise<nodemailer.Transporter> {
+  // If SMTP_PASS is configured with a real key, use production SMTP
+  if (process.env.SMTP_PASS && process.env.SMTP_PASS !== "re_your_api_key_here") {
+    return nodemailer.createTransport({
+      host: process.env.SMTP_HOST || "smtp.resend.com",
+      port: parseInt(process.env.SMTP_PORT || "465"),
+      secure: true,
+      auth: {
+        user: process.env.SMTP_USER || "resend",
+        pass: process.env.SMTP_PASS,
+      },
+    });
+  }
+
+  // Development: use Ethereal fake SMTP (emails are captured, not delivered)
+  console.log("[Email] No SMTP credentials configured - using Ethereal test account");
+  const testAccount = await nodemailer.createTestAccount();
+  console.log("[Email] Ethereal test account created:", testAccount.user);
+  return nodemailer.createTransport({
+    host: "smtp.ethereal.email",
+    port: 587,
+    secure: false,
+    auth: {
+      user: testAccount.user,
+      pass: testAccount.pass,
+    },
+  });
+}
 
 const fromAddress =
   process.env.SMTP_FROM || "NETkyu Contract Signer <contracts@netkyu.com>";
@@ -23,6 +51,10 @@ export async function sendSigningEmail(
   message?: string
 ) {
   const signingUrl = `${getAppUrl()}/sign/${signingToken}`;
+
+  // Always log signing URL for easy dev access
+  console.log(`\n[Email] Signing URL for ${signerName} (${signerEmail}):`);
+  console.log(`  ${signingUrl}\n`);
 
   const html = `
     <!DOCTYPE html>
@@ -68,12 +100,19 @@ export async function sendSigningEmail(
     </html>
   `;
 
-  await transporter.sendMail({
+  const transporter = await getTransporter();
+  const info = await transporter.sendMail({
     from: fromAddress,
     to: signerEmail,
     subject: `${senderName} has sent you "${documentName}" to sign`,
     html,
   });
+
+  // Log Ethereal preview URL if available
+  const previewUrl = nodemailer.getTestMessageUrl(info);
+  if (previewUrl) {
+    console.log(`[Email] Preview email: ${previewUrl}`);
+  }
 }
 
 export async function sendCompletionEmail(
@@ -124,12 +163,18 @@ export async function sendCompletionEmail(
     </html>
   `;
 
-  await transporter.sendMail({
+  const transporter = await getTransporter();
+  const info = await transporter.sendMail({
     from: fromAddress,
     to: recipientEmail,
     subject: `"${documentName}" has been signed by all parties`,
     html,
   });
+
+  const previewUrl = nodemailer.getTestMessageUrl(info);
+  if (previewUrl) {
+    console.log(`[Email] Preview email: ${previewUrl}`);
+  }
 }
 
 export async function sendReminderEmail(
@@ -140,6 +185,9 @@ export async function sendReminderEmail(
   senderName: string
 ) {
   const signingUrl = `${getAppUrl()}/sign/${signingToken}`;
+
+  console.log(`\n[Email] Reminder signing URL for ${signerName} (${signerEmail}):`);
+  console.log(`  ${signingUrl}\n`);
 
   const html = `
     <!DOCTYPE html>
@@ -181,10 +229,16 @@ export async function sendReminderEmail(
     </html>
   `;
 
-  await transporter.sendMail({
+  const transporter = await getTransporter();
+  const info = await transporter.sendMail({
     from: fromAddress,
     to: signerEmail,
     subject: `Reminder: "${documentName}" needs your signature`,
     html,
   });
+
+  const previewUrl = nodemailer.getTestMessageUrl(info);
+  if (previewUrl) {
+    console.log(`[Email] Preview email: ${previewUrl}`);
+  }
 }
