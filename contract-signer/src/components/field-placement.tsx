@@ -96,44 +96,31 @@ export function FieldPlacement({
   const [containerWidth, setContainerWidth] = useState<number>(0);
   const [pageHeight, setPageHeight] = useState<number>(0);
   const canvasRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const pageWrapperRef = useRef<HTMLDivElement>(null);
 
   // Stable blob URL
   const fileUrl = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
 
-  // Track container width
+  // Track canvas content dimensions (excluding borders) - must match CSS percentage reference
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!canvasRef.current) return;
     let rafId: number;
     const observer = new ResizeObserver((entries) => {
       cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(() => {
         for (const entry of entries) {
           const w = Math.floor(entry.contentRect.width);
+          const h = Math.floor(entry.contentRect.height);
           setContainerWidth((prev) => (Math.abs(prev - w) > 1 ? w : prev));
+          if (h > 0) setPageHeight(h);
         }
       });
     });
-    observer.observe(containerRef.current);
+    observer.observe(canvasRef.current);
     return () => {
       cancelAnimationFrame(rafId);
       observer.disconnect();
     };
   }, []);
-
-  // Track rendered page height
-  useEffect(() => {
-    if (!pageWrapperRef.current) return;
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const h = Math.floor(entry.contentRect.height);
-        if (h > 0) setPageHeight(h);
-      }
-    });
-    observer.observe(pageWrapperRef.current);
-    return () => observer.disconnect();
-  }, [currentPage, numPages]);
 
   const stableWidth = Math.floor(containerWidth) || undefined;
 
@@ -144,8 +131,11 @@ export function FieldPlacement({
       if (!containerWidth || !pageHeight) return;
 
       const rect = canvasRef.current.getBoundingClientRect();
-      const pixelX = e.clientX - rect.left;
-      const pixelY = e.clientY - rect.top;
+      const style = getComputedStyle(canvasRef.current);
+      const borderLeft = parseFloat(style.borderLeftWidth) || 0;
+      const borderTop = parseFloat(style.borderTopWidth) || 0;
+      const pixelX = e.clientX - rect.left - borderLeft;
+      const pixelY = e.clientY - rect.top - borderTop;
       const pctX = (pixelX / containerWidth) * 100;
       const pctY = (pixelY / pageHeight) * 100;
 
@@ -199,8 +189,11 @@ export function FieldPlacement({
     e.stopPropagation();
     if (!canvasRef.current || !containerWidth || !pageHeight) return;
     const rect = canvasRef.current.getBoundingClientRect();
-    const clickPctX = ((e.clientX - rect.left) / containerWidth) * 100;
-    const clickPctY = ((e.clientY - rect.top) / pageHeight) * 100;
+    const style = getComputedStyle(canvasRef.current);
+    const borderLeft = parseFloat(style.borderLeftWidth) || 0;
+    const borderTop = parseFloat(style.borderTopWidth) || 0;
+    const clickPctX = ((e.clientX - rect.left - borderLeft) / containerWidth) * 100;
+    const clickPctY = ((e.clientY - rect.top - borderTop) / pageHeight) * 100;
     setMoveOffset({ x: clickPctX - fieldPctX, y: clickPctY - fieldPctY });
     setMovingField(fieldId);
   }
@@ -296,7 +289,7 @@ export function FieldPlacement({
       </div>
 
       {/* PDF Canvas area */}
-      <div className="flex-1" ref={containerRef}>
+      <div className="flex-1">
         {/* Page navigation */}
         {numPages > 1 && (
           <div className="mb-3 flex items-center justify-center gap-3">
@@ -331,39 +324,41 @@ export function FieldPlacement({
           )}
         >
           {/* PDF rendering - single page */}
-          {!file || !containerWidth ? (
-            <div className="flex min-h-[700px] items-center justify-center" style={{ aspectRatio: "8.5/11" }}>
-              <p className="text-muted-foreground">{!file ? "No document uploaded" : "Loading..."}</p>
+          {!file ? (
+            <div className="flex items-center justify-center" style={{ aspectRatio: "8.5/11" }}>
+              <p className="text-muted-foreground">No document uploaded</p>
             </div>
           ) : (
-            <div ref={pageWrapperRef} key={stablePageKey} className="page-flip">
-              <Document
-                file={fileUrl}
-                onLoadSuccess={({ numPages: n }) => setNumPages(n)}
-                loading={
-                  <div
-                    className="flex min-h-[700px] items-center justify-center"
-                    style={{ aspectRatio: "8.5/11" }}
-                  >
-                    <p className="text-muted-foreground">Loading PDF...</p>
-                  </div>
-                }
-                error={
-                  <div
-                    className="flex min-h-[700px] items-center justify-center"
-                    style={{ aspectRatio: "8.5/11" }}
-                  >
-                    <p className="text-red-500">Failed to load PDF</p>
-                  </div>
-                }
-              >
-                <Page
-                  pageNumber={currentPage}
-                  width={stableWidth}
-                  renderTextLayer={false}
-                  renderAnnotationLayer={false}
-                />
-              </Document>
+            <div key={stablePageKey} className="page-flip" style={{ minHeight: pageHeight || undefined, aspectRatio: pageHeight ? undefined : "8.5/11" }}>
+              {containerWidth > 0 && (
+                <Document
+                  file={fileUrl}
+                  onLoadSuccess={({ numPages: n }) => setNumPages(n)}
+                  loading={
+                    <div
+                      className="flex items-center justify-center"
+                      style={{ aspectRatio: "8.5/11" }}
+                    >
+                      <p className="text-muted-foreground">Loading PDF...</p>
+                    </div>
+                  }
+                  error={
+                    <div
+                      className="flex items-center justify-center"
+                      style={{ aspectRatio: "8.5/11" }}
+                    >
+                      <p className="text-red-500">Failed to load PDF</p>
+                    </div>
+                  }
+                >
+                  <Page
+                    pageNumber={currentPage}
+                    width={stableWidth}
+                    renderTextLayer={false}
+                    renderAnnotationLayer={false}
+                  />
+                </Document>
+              )}
             </div>
           )}
 

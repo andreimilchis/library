@@ -324,14 +324,14 @@ export default function SigningPage() {
           ref={pdfContainerRef}
           className="relative rounded-xl border-2 border-slate-200 bg-white shadow-sm overflow-hidden"
         >
-          {pdfContainerWidth > 0 ? (
-            <div key={`page_${currentPage}`} className="page-flip">
+          <div key={`page_${currentPage}`} className="page-flip" style={{ aspectRatio: pdfContainerWidth > 0 ? undefined : "8.5/11" }}>
+            {pdfContainerWidth > 0 ? (
               <Document
                 file={data.document.originalPdfUrl}
                 onLoadSuccess={({ numPages: n }) => setNumPages(n)}
                 loading={
                   <div
-                    className="flex min-h-[700px] items-center justify-center"
+                    className="flex items-center justify-center"
                     style={{ aspectRatio: "8.5/11" }}
                   >
                     <p className="text-muted-foreground">Loading PDF...</p>
@@ -339,7 +339,7 @@ export default function SigningPage() {
                 }
                 error={
                   <div
-                    className="flex min-h-[700px] items-center justify-center"
+                    className="flex items-center justify-center"
                     style={{ aspectRatio: "8.5/11" }}
                   >
                     <p className="text-red-500">Failed to load PDF. The document may not be a valid PDF file.</p>
@@ -348,20 +348,17 @@ export default function SigningPage() {
               >
                 <Page
                   pageNumber={currentPage}
-                  width={pdfContainerWidth || undefined}
+                  width={pdfContainerWidth}
                   renderTextLayer={false}
                   renderAnnotationLayer={false}
                 />
               </Document>
-            </div>
-          ) : (
-            <div
-              className="flex min-h-[700px] items-center justify-center"
-              style={{ aspectRatio: "8.5/11" }}
-            >
-              <p className="text-muted-foreground">Loading PDF...</p>
-            </div>
-          )}
+            ) : (
+              <div className="flex items-center justify-center" style={{ aspectRatio: "8.5/11" }}>
+                <p className="text-muted-foreground">Loading PDF...</p>
+              </div>
+            )}
+          </div>
 
           {/* Interactive fields overlaid on current page - percentage positioned */}
           {currentPageFields.map((field) => {
