@@ -1,46 +1,18 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 import { getAppUrl } from "./utils";
 
-let transporterPromise: Promise<nodemailer.Transporter>;
-
-function getTransporter(): Promise<nodemailer.Transporter> {
-  if (!transporterPromise) {
-    transporterPromise = createTransporter();
+function getResend(): Resend {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey || apiKey === "re_your_api_key_here") {
+    throw new Error(
+      "RESEND_API_KEY is not configured. Please set it in your .env file."
+    );
   }
-  return transporterPromise;
+  return new Resend(apiKey);
 }
 
-async function createTransporter(): Promise<nodemailer.Transporter> {
-  // If SMTP_PASS is configured with a real key, use production SMTP
-  if (process.env.SMTP_PASS && process.env.SMTP_PASS !== "re_your_api_key_here") {
-    return nodemailer.createTransport({
-      host: process.env.SMTP_HOST || "smtp.resend.com",
-      port: parseInt(process.env.SMTP_PORT || "465"),
-      secure: true,
-      auth: {
-        user: process.env.SMTP_USER || "resend",
-        pass: process.env.SMTP_PASS,
-      },
-    });
-  }
-
-  // Development: use Ethereal fake SMTP (emails are captured, not delivered)
-  console.log("[Email] No SMTP credentials configured - using Ethereal test account");
-  const testAccount = await nodemailer.createTestAccount();
-  console.log("[Email] Ethereal test account created:", testAccount.user);
-  return nodemailer.createTransport({
-    host: "smtp.ethereal.email",
-    port: 587,
-    secure: false,
-    auth: {
-      user: testAccount.user,
-      pass: testAccount.pass,
-    },
-  });
-}
-
-const fromAddress =
-  process.env.SMTP_FROM || "NETkyu Contract Signer <office@netkyu.com>";
+const getFromAddress = () =>
+  process.env.EMAIL_FROM || "NETkyu Contract Signer <office@netkyu.com>";
 
 export async function sendSigningEmail(
   signerName: string,
@@ -100,19 +72,20 @@ export async function sendSigningEmail(
     </html>
   `;
 
-  const transporter = await getTransporter();
-  const info = await transporter.sendMail({
-    from: fromAddress,
+  const resend = getResend();
+  const { data, error } = await resend.emails.send({
+    from: getFromAddress(),
     to: signerEmail,
     subject: `${senderName} has sent you "${documentName}" to sign`,
     html,
   });
 
-  // Log Ethereal preview URL if available
-  const previewUrl = nodemailer.getTestMessageUrl(info);
-  if (previewUrl) {
-    console.log(`[Email] Preview email: ${previewUrl}`);
+  if (error) {
+    console.error("[Email] Resend error:", error);
+    throw new Error(`Failed to send email: ${error.message}`);
   }
+
+  console.log(`[Email] Sent successfully via Resend. ID: ${data?.id}`);
 }
 
 export async function sendCompletionEmail(
@@ -163,18 +136,20 @@ export async function sendCompletionEmail(
     </html>
   `;
 
-  const transporter = await getTransporter();
-  const info = await transporter.sendMail({
-    from: fromAddress,
+  const resend = getResend();
+  const { data, error } = await resend.emails.send({
+    from: getFromAddress(),
     to: recipientEmail,
     subject: `"${documentName}" has been signed by all parties`,
     html,
   });
 
-  const previewUrl = nodemailer.getTestMessageUrl(info);
-  if (previewUrl) {
-    console.log(`[Email] Preview email: ${previewUrl}`);
+  if (error) {
+    console.error("[Email] Resend error:", error);
+    throw new Error(`Failed to send email: ${error.message}`);
   }
+
+  console.log(`[Email] Completion email sent via Resend. ID: ${data?.id}`);
 }
 
 export async function sendReminderEmail(
@@ -229,16 +204,18 @@ export async function sendReminderEmail(
     </html>
   `;
 
-  const transporter = await getTransporter();
-  const info = await transporter.sendMail({
-    from: fromAddress,
+  const resend = getResend();
+  const { data, error } = await resend.emails.send({
+    from: getFromAddress(),
     to: signerEmail,
     subject: `Reminder: "${documentName}" needs your signature`,
     html,
   });
 
-  const previewUrl = nodemailer.getTestMessageUrl(info);
-  if (previewUrl) {
-    console.log(`[Email] Preview email: ${previewUrl}`);
+  if (error) {
+    console.error("[Email] Resend error:", error);
+    throw new Error(`Failed to send email: ${error.message}`);
   }
+
+  console.log(`[Email] Reminder email sent via Resend. ID: ${data?.id}`);
 }
