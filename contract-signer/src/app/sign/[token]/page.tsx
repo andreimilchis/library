@@ -1,7 +1,10 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
+import { Document, Page, pdfjs } from "react-pdf";
+import "react-pdf/dist/Page/AnnotationLayer.css";
+import "react-pdf/dist/Page/TextLayer.css";
 import {
   FileText,
   PenLine,
@@ -13,6 +16,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  "pdfjs-dist/build/pdf.worker.min.mjs",
+  import.meta.url
+).toString();
 
 type SigningData = {
   document: {
@@ -56,6 +64,20 @@ export default function SigningPage() {
   const [typedSignature, setTypedSignature] = useState("");
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDrawingRef = useRef(false);
+  const [numPages, setNumPages] = useState(0);
+  const [pdfContainerWidth, setPdfContainerWidth] = useState(0);
+  const pdfContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!pdfContainerRef.current) return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setPdfContainerWidth(Math.floor(entry.contentRect.width));
+      }
+    });
+    observer.observe(pdfContainerRef.current);
+    return () => observer.disconnect();
+  }, [data]);
 
   useEffect(() => {
     fetchSigningData();
@@ -271,17 +293,43 @@ export default function SigningPage() {
           </p>
         </div>
 
-        {/* PDF viewer placeholder with fields */}
+        {/* PDF viewer with fields */}
         <div
-          className="relative rounded-xl border-2 border-slate-200 bg-white shadow-sm"
-          style={{ minHeight: 700, aspectRatio: "8.5/11" }}
+          ref={pdfContainerRef}
+          className="relative rounded-xl border-2 border-slate-200 bg-white shadow-sm overflow-hidden"
         >
-          {/* Document content placeholder */}
-          <div className="flex h-full items-center justify-center text-muted-foreground">
-            <p className="text-sm">{data.document.name}</p>
-          </div>
+          <Document
+            file={data.document.originalPdfUrl}
+            onLoadSuccess={({ numPages }) => setNumPages(numPages)}
+            loading={
+              <div
+                className="flex min-h-[700px] items-center justify-center"
+                style={{ aspectRatio: "8.5/11" }}
+              >
+                <p className="text-muted-foreground">Loading PDF...</p>
+              </div>
+            }
+            error={
+              <div
+                className="flex min-h-[700px] items-center justify-center"
+                style={{ aspectRatio: "8.5/11" }}
+              >
+                <p className="text-red-500">Failed to load PDF. The document may not be a valid PDF file.</p>
+              </div>
+            }
+          >
+            {Array.from(new Array(numPages), (_, index) => (
+              <Page
+                key={`page_${index + 1}`}
+                pageNumber={index + 1}
+                width={pdfContainerWidth || undefined}
+                renderTextLayer={false}
+                renderAnnotationLayer={false}
+              />
+            ))}
+          </Document>
 
-          {/* Interactive fields */}
+          {/* Interactive fields overlaid on PDF */}
           {data.fields.map((field) => {
             const value = fieldValues[field.id];
             const isSignature = field.type === "SIGNATURE" || field.type === "INITIALS";
