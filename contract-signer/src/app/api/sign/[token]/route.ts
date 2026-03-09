@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendCompletionEmail } from "@/lib/email";
+import { generateSignedPdf, getSignedPdfBuffer } from "@/lib/pdf-generator";
 
 // GET /api/sign/[token] - Get signing data for a token
 export async function GET(
@@ -153,16 +154,49 @@ export async function POST(
       },
     });
 
-    // Notify the sender
+    // Generate signed PDF with all signatures overlaid
+    let signedPdfBuffer: Buffer | undefined;
+    try {
+      await generateSignedPdf(signer.document.id);
+      signedPdfBuffer = await getSignedPdfBuffer(signer.document.id);
+
+      await prisma.documentAuditLog.create({
+        data: {
+          documentId: signer.document.id,
+          action: "Signed PDF generated",
+          details: "PDF with all signatures has been generated",
+        },
+      });
+    } catch (error) {
+      console.error("Failed to generate signed PDF:", error);
+    }
+
+    // Send signed document to the SENDER
     try {
       await sendCompletionEmail(
         signer.document.user.email,
         signer.document.user.name,
         signer.document.name,
-        signer.document.id
+        signer.document.id,
+        signedPdfBuffer
       );
     } catch (error) {
-      console.error("Failed to send completion email:", error);
+      console.error("Failed to send completion email to sender:", error);
+    }
+
+    // Send signed document to ALL SIGNERS
+    for (const s of allSigners) {
+      try {
+        await sendCompletionEmail(
+          s.email,
+          s.name,
+          signer.document.name,
+          signer.document.id,
+          signedPdfBuffer
+        );
+      } catch (error) {
+        console.error(`Failed to send completion email to signer ${s.email}:`, error);
+      }
     }
   }
 

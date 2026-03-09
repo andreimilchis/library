@@ -88,11 +88,16 @@ export async function sendSigningEmail(
   console.log(`[Email] Sent successfully via Resend. ID: ${data?.id}`);
 }
 
+/**
+ * Send the completed/signed document to a recipient with the signed PDF attached.
+ * Used for BOTH the sender and each signer after all signatures are collected.
+ */
 export async function sendCompletionEmail(
   recipientEmail: string,
   recipientName: string,
   documentName: string,
-  documentId: string
+  documentId: string,
+  signedPdfBuffer?: Buffer
 ) {
   const documentUrl = `${getAppUrl()}/documents/${documentId}`;
 
@@ -122,11 +127,9 @@ export async function sendCompletionEmail(
         </div>
         <div class="body">
           <p>Hi ${recipientName},</p>
-          <div class="success">All signers have signed "${documentName}"</div>
-          <p>The document is now complete. You can download the signed PDF from your dashboard.</p>
-          <div class="btn-container">
-            <a href="${documentUrl}" class="btn">View Document</a>
-          </div>
+          <div class="success">All parties have signed "${documentName}"</div>
+          <p>The signed document is attached to this email as a PDF.${documentUrl ? ` You can also <a href="${documentUrl}" style="color: #2563eb;">view it online</a>.` : ""}</p>
+          ${signedPdfBuffer ? '<p style="font-size: 13px; color: #6b7280;">Please save the attached PDF for your records.</p>' : ""}
         </div>
         <div class="footer">
           <p>Sent via NETkyu Contract Signer</p>
@@ -136,20 +139,32 @@ export async function sendCompletionEmail(
     </html>
   `;
 
-  const resend = getResend();
-  const { data, error } = await resend.emails.send({
+  const emailPayload: Parameters<Resend["emails"]["send"]>[0] = {
     from: getFromAddress(),
     to: recipientEmail,
-    subject: `"${documentName}" has been signed by all parties`,
+    subject: `Completed: "${documentName}" — signed by all parties`,
     html,
-  });
+  };
+
+  // Attach signed PDF if available
+  if (signedPdfBuffer) {
+    emailPayload.attachments = [
+      {
+        filename: `${documentName} - Signed.pdf`,
+        content: signedPdfBuffer,
+      },
+    ];
+  }
+
+  const resend = getResend();
+  const { data, error } = await resend.emails.send(emailPayload);
 
   if (error) {
     console.error("[Email] Resend error:", error);
     throw new Error(`Failed to send email: ${error.message}`);
   }
 
-  console.log(`[Email] Completion email sent via Resend. ID: ${data?.id}`);
+  console.log(`[Email] Completion email sent to ${recipientEmail} via Resend. ID: ${data?.id}`);
 }
 
 export async function sendReminderEmail(
