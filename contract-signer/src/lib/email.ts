@@ -40,7 +40,7 @@ async function createTransporter(): Promise<nodemailer.Transporter> {
 }
 
 const fromAddress =
-  process.env.SMTP_FROM || "NETkyu Contract Signer <contracts@netkyu.com>";
+  process.env.SMTP_FROM || "NETkyu Contract Signer <office@netkyu.com>";
 
 export async function sendSigningEmail(
   signerName: string,
