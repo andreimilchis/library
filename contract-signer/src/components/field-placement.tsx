@@ -91,16 +91,24 @@ export function FieldPlacement({
   const canvasRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Track container width for responsive PDF rendering
+  // Track container width for responsive PDF rendering (debounced to prevent render loops)
   useEffect(() => {
     if (!containerRef.current) return;
+    let rafId: number;
     const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        setContainerWidth(entry.contentRect.width);
-      }
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        for (const entry of entries) {
+          const w = Math.floor(entry.contentRect.width);
+          setContainerWidth((prev) => (Math.abs(prev - w) > 1 ? w : prev));
+        }
+      });
     });
     observer.observe(containerRef.current);
-    return () => observer.disconnect();
+    return () => {
+      cancelAnimationFrame(rafId);
+      observer.disconnect();
+    };
   }, []);
 
   const handleFieldDrop = useCallback(
