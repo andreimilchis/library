@@ -73,12 +73,19 @@ export async function sendSigningEmail(
   `;
 
   const resend = getResend();
+  console.log(`[Email] Sending signing email via Resend...`);
+  console.log(`[Email]   From: ${getFromAddress()}`);
+  console.log(`[Email]   To: ${signerEmail}`);
+  console.log(`[Email]   API Key: ${process.env.RESEND_API_KEY?.substring(0, 10)}...`);
+
   const { data, error } = await resend.emails.send({
     from: getFromAddress(),
     to: signerEmail,
     subject: `${senderName} has sent you "${documentName}" to sign`,
     html,
   });
+
+  console.log(`[Email] Resend response:`, JSON.stringify({ data, error }, null, 2));
 
   if (error) {
     console.error("[Email] Resend error:", error);
