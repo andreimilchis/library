@@ -109,7 +109,6 @@ export function FieldPlacement({
   const [selectedSigner, setSelectedSigner] = useState(signers[0]?.id || "");
   const [draggingType, setDraggingType] = useState<string | null>(null);
   const [movingField, setMovingField] = useState<string | null>(null);
-  const [moveOffset, setMoveOffset] = useState({ x: 0, y: 0 });
   const [currentPage, setCurrentPage] = useState(1);
   const [numPages, setNumPages] = useState(0);
   const [containerWidth, setContainerWidth] = useState<number>(0);
@@ -138,6 +137,19 @@ export function FieldPlacement({
     startHeight: number;
   } | null>(null);
   const [isResizing, setIsResizing] = useState(false);
+
+  // Optimized drag: direct DOM manipulation via refs for 60fps movement
+  const movingRef = useRef<{
+    fieldId: string;
+    offsetX: number;
+    offsetY: number;
+    startPosX: number;
+    startPosY: number;
+    element: HTMLElement;
+    lastClientX: number;
+    lastClientY: number;
+    rafId: number;
+  } | null>(null);
 
   // Signature modal for "Me" signer
   const [showSignatureModal, setShowSignatureModal] = useState(false);
@@ -246,17 +258,26 @@ export function FieldPlacement({
         return;
       }
 
-      // Handle smooth field moving
-      if (movingField) {
-        const pos = getCanvasPct(e);
-        if (pos) {
-          onFieldsChange(
-            fields.map((f) =>
-              f.id === movingField
-                ? { ...f, posX: pos.pctX - moveOffset.x, posY: pos.pctY - moveOffset.y }
-                : f
-            )
-          );
+      // Handle smooth field moving via direct DOM + rAF (no React re-renders)
+      const m = movingRef.current;
+      if (m) {
+        m.lastClientX = e.clientX;
+        m.lastClientY = e.clientY;
+        if (!m.rafId) {
+          m.rafId = requestAnimationFrame(() => {
+            const mr = movingRef.current;
+            if (!mr || !canvasRef.current || !containerWidth || !pageHeight) return;
+            const rect = canvasRef.current.getBoundingClientRect();
+            const style = getComputedStyle(canvasRef.current);
+            const borderLeft = parseFloat(style.borderLeftWidth) || 0;
+            const borderTop = parseFloat(style.borderTopWidth) || 0;
+            const pctX = (((mr.lastClientX - rect.left - borderLeft) / zoom) / containerWidth) * 100;
+            const pctY = (((mr.lastClientY - rect.top - borderTop) / zoom) / pageHeight) * 100;
+            const deltaX = ((pctX - mr.offsetX - mr.startPosX) / 100) * containerWidth;
+            const deltaY = ((pctY - mr.offsetY - mr.startPosY) / 100) * pageHeight;
+            mr.element.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+            mr.rafId = 0;
+          });
         }
         return;
       }
@@ -274,7 +295,22 @@ export function FieldPlacement({
         return;
       }
 
-      if (movingField) {
+      if (movingRef.current) {
+        const mr = movingRef.current;
+        cancelAnimationFrame(mr.rafId);
+        mr.element.style.transform = '';
+        mr.element.style.willChange = '';
+        const pos = getCanvasPct(e);
+        if (pos) {
+          onFieldsChange(
+            fields.map((f) =>
+              f.id === mr.fieldId
+                ? { ...f, posX: pos.pctX - mr.offsetX, posY: pos.pctY - mr.offsetY }
+                : f
+            )
+          );
+        }
+        movingRef.current = null;
         setMovingField(null);
         return;
       }
@@ -331,7 +367,7 @@ export function FieldPlacement({
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isResizing, containerWidth, pageHeight, fields, onFieldsChange, movingField, moveOffset, draggingType, getCanvasPct, zoom, selectedSigner, signers, savedSignature, currentPage]);
+  }, [isResizing, containerWidth, pageHeight, fields, onFieldsChange, draggingType, getCanvasPct, zoom, selectedSigner, signers, savedSignature, currentPage]);
 
   // Canvas click - deselect field if clicking on empty area
   const handleCanvasClick = useCallback(
@@ -362,7 +398,19 @@ export function FieldPlacement({
     const borderTop = parseFloat(style.borderTopWidth) || 0;
     const clickPctX = (((e.clientX - rect.left - borderLeft) / zoom) / containerWidth) * 100;
     const clickPctY = (((e.clientY - rect.top - borderTop) / zoom) / pageHeight) * 100;
-    setMoveOffset({ x: clickPctX - fieldPctX, y: clickPctY - fieldPctY });
+    const element = e.currentTarget as HTMLElement;
+    element.style.willChange = 'transform';
+    movingRef.current = {
+      fieldId,
+      offsetX: clickPctX - fieldPctX,
+      offsetY: clickPctY - fieldPctY,
+      startPosX: fieldPctX,
+      startPosY: fieldPctY,
+      element,
+      lastClientX: e.clientX,
+      lastClientY: e.clientY,
+      rafId: 0,
+    };
     setMovingField(fieldId);
   }
 
