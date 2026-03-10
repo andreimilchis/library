@@ -669,6 +669,7 @@ export function FieldPlacement({
         </div>
 
         <div className="overflow-auto rounded-xl" style={{ maxHeight: "75vh" }}>
+        <div style={{ height: zoom !== 1 && pageHeight ? `${pageHeight * zoom}px` : undefined }}>
         <div
           ref={canvasRef}
           onClick={handleCanvasClick}
@@ -829,6 +830,7 @@ export function FieldPlacement({
               </p>
             </div>
           )}
+        </div>
         </div>
         </div>
       </div>

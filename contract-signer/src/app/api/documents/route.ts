@@ -97,9 +97,11 @@ export async function POST(request: NextRequest) {
   });
 
   // Create mapping from client-side signer IDs to database signer IDs
+  // Sort DB signers by order to match the input array (Prisma include doesn't guarantee order)
+  const sortedDbSigners = [...document.signers].sort((a, b) => a.order - b.order);
   const signerIdMap = new Map<string, string>();
   signers.forEach((clientSigner, i) => {
-    signerIdMap.set(clientSigner.id, document.signers[i].id);
+    signerIdMap.set(clientSigner.id, sortedDbSigners[i].id);
   });
 
   // Create fields with correct signer IDs and pre-filled values for self-signer
@@ -154,7 +156,7 @@ export async function POST(request: NextRequest) {
   const senderName = session.user.name || "NETkyu";
   for (let i = 0; i < signers.length; i++) {
     const clientSigner = signers[i];
-    const dbSigner = document.signers[i];
+    const dbSigner = sortedDbSigners[i];
 
     // Skip sending email to self-signer
     if (clientSigner.isSelf) continue;
