@@ -64,7 +64,7 @@ export default function NewDocumentPage() {
   const [dragOver, setDragOver] = useState(false);
 
   // Step 2 - Signers
-  const [includeSelf, setIncludeSelf] = useState(false);
+  const [includeSelf, setIncludeSelf] = useState(true);
   const selfSignerId = "self-signer";
   const [signers, setSigners] = useState<Signer[]>([
     { id: crypto.randomUUID(), name: "", email: "" },

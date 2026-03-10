@@ -16,6 +16,9 @@ import {
   Trash2,
   ChevronLeft,
   ChevronRight,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -114,6 +117,15 @@ export function FieldPlacement({
   const [selectedField, setSelectedField] = useState<string | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
 
+  // Zoom state
+  const [zoom, setZoom] = useState(1);
+  const ZOOM_MIN = 0.5;
+  const ZOOM_MAX = 2.5;
+  const ZOOM_STEP = 0.15;
+
+  // Ghost position for dragging new fields from sidebar
+  const [ghostPos, setGhostPos] = useState<{ x: number; y: number } | null>(null);
+
   // Resize state
   const resizingRef = useRef<{
     fieldId: string;
@@ -163,156 +175,172 @@ export function FieldPlacement({
 
   const stableWidth = Math.floor(containerWidth) || undefined;
 
-  // Document-level resize handler
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      const r = resizingRef.current;
-      if (!r || !containerWidth || !pageHeight) return;
-
-      const deltaPctX = ((e.clientX - r.startMouseX) / containerWidth) * 100;
-      const deltaPctY = ((e.clientY - r.startMouseY) / pageHeight) * 100;
-
-      const minW = 3;
-      const minH = 1.5;
-
-      let posX = r.startPosX;
-      let posY = r.startPosY;
-      let width = r.startWidth;
-      let height = r.startHeight;
-
-      switch (r.handle) {
-        case "se":
-          width = Math.max(minW, r.startWidth + deltaPctX);
-          height = Math.max(minH, r.startHeight + deltaPctY);
-          break;
-        case "sw":
-          posX = r.startPosX + deltaPctX;
-          width = Math.max(minW, r.startWidth - deltaPctX);
-          height = Math.max(minH, r.startHeight + deltaPctY);
-          if (width <= minW) posX = r.startPosX + r.startWidth - minW;
-          break;
-        case "ne":
-          posY = r.startPosY + deltaPctY;
-          width = Math.max(minW, r.startWidth + deltaPctX);
-          height = Math.max(minH, r.startHeight - deltaPctY);
-          if (height <= minH) posY = r.startPosY + r.startHeight - minH;
-          break;
-        case "nw":
-          posX = r.startPosX + deltaPctX;
-          posY = r.startPosY + deltaPctY;
-          width = Math.max(minW, r.startWidth - deltaPctX);
-          height = Math.max(minH, r.startHeight - deltaPctY);
-          if (width <= minW) posX = r.startPosX + r.startWidth - minW;
-          if (height <= minH) posY = r.startPosY + r.startHeight - minH;
-          break;
-      }
-
-      onFieldsChange(
-        fields.map((f) =>
-          f.id === r.fieldId ? { ...f, posX: posX, posY: posY, width, height } : f
-        )
-      );
-    };
-
-    const handleMouseUp = () => {
-      if (resizingRef.current) {
-        resizingRef.current = null;
-        setIsResizing(false);
-      }
-    };
-
-    if (isResizing) {
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
-      return () => {
-        document.removeEventListener("mousemove", handleMouseMove);
-        document.removeEventListener("mouseup", handleMouseUp);
-      };
-    }
-  }, [isResizing, containerWidth, pageHeight, fields, onFieldsChange]);
-
-  // Place or move a field
-  const handleFieldDrop = useCallback(
-    (e: React.MouseEvent) => {
-      if (!canvasRef.current || (!draggingType && !movingField)) return;
-      if (!containerWidth || !pageHeight) return;
-
+  // Helper: get percentage coordinates from mouse event on canvas
+  const getCanvasPct = useCallback(
+    (e: MouseEvent | React.MouseEvent) => {
+      if (!canvasRef.current || !containerWidth || !pageHeight) return null;
       const rect = canvasRef.current.getBoundingClientRect();
       const style = getComputedStyle(canvasRef.current);
       const borderLeft = parseFloat(style.borderLeftWidth) || 0;
       const borderTop = parseFloat(style.borderTopWidth) || 0;
-      const pixelX = e.clientX - rect.left - borderLeft;
-      const pixelY = e.clientY - rect.top - borderTop;
-      const pctX = (pixelX / containerWidth) * 100;
-      const pctY = (pixelY / pageHeight) * 100;
+      // Account for zoom: the visual rect is scaled, so divide by zoom
+      const pixelX = (e.clientX - rect.left - borderLeft) / zoom;
+      const pixelY = (e.clientY - rect.top - borderTop) / zoom;
+      return {
+        pctX: (pixelX / containerWidth) * 100,
+        pctY: (pixelY / pageHeight) * 100,
+      };
+    },
+    [containerWidth, pageHeight, zoom]
+  );
 
-      if (movingField) {
+  // Document-level resize + move handler
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      // Handle resize
+      const r = resizingRef.current;
+      if (r && containerWidth && pageHeight) {
+        const deltaPctX = ((e.clientX - r.startMouseX) / zoom / containerWidth) * 100;
+        const deltaPctY = ((e.clientY - r.startMouseY) / zoom / pageHeight) * 100;
+
+        const minW = 3;
+        const minH = 1.5;
+
+        let posX = r.startPosX;
+        let posY = r.startPosY;
+        let width = r.startWidth;
+        let height = r.startHeight;
+
+        switch (r.handle) {
+          case "se":
+            width = Math.max(minW, r.startWidth + deltaPctX);
+            height = Math.max(minH, r.startHeight + deltaPctY);
+            break;
+          case "sw":
+            posX = r.startPosX + deltaPctX;
+            width = Math.max(minW, r.startWidth - deltaPctX);
+            height = Math.max(minH, r.startHeight + deltaPctY);
+            if (width <= minW) posX = r.startPosX + r.startWidth - minW;
+            break;
+          case "ne":
+            posY = r.startPosY + deltaPctY;
+            width = Math.max(minW, r.startWidth + deltaPctX);
+            height = Math.max(minH, r.startHeight - deltaPctY);
+            if (height <= minH) posY = r.startPosY + r.startHeight - minH;
+            break;
+          case "nw":
+            posX = r.startPosX + deltaPctX;
+            posY = r.startPosY + deltaPctY;
+            width = Math.max(minW, r.startWidth - deltaPctX);
+            height = Math.max(minH, r.startHeight - deltaPctY);
+            if (width <= minW) posX = r.startPosX + r.startWidth - minW;
+            if (height <= minH) posY = r.startPosY + r.startHeight - minH;
+            break;
+        }
+
         onFieldsChange(
           fields.map((f) =>
-            f.id === movingField
-              ? { ...f, posX: pctX - moveOffset.x, posY: pctY - moveOffset.y }
-              : f
+            f.id === r.fieldId ? { ...f, posX: posX, posY: posY, width, height } : f
           )
         );
+        return;
+      }
+
+      // Handle smooth field moving
+      if (movingField) {
+        const pos = getCanvasPct(e);
+        if (pos) {
+          onFieldsChange(
+            fields.map((f) =>
+              f.id === movingField
+                ? { ...f, posX: pos.pctX - moveOffset.x, posY: pos.pctY - moveOffset.y }
+                : f
+            )
+          );
+        }
+        return;
+      }
+
+      // Handle ghost position for dragging new field from sidebar
+      if (draggingType) {
+        setGhostPos({ x: e.clientX, y: e.clientY });
+      }
+    };
+
+    const handleMouseUp = (e: MouseEvent) => {
+      if (resizingRef.current) {
+        resizingRef.current = null;
+        setIsResizing(false);
+        return;
+      }
+
+      if (movingField) {
         setMovingField(null);
         return;
       }
 
-      if (draggingType) {
-        const fieldDef = FIELD_TYPES.find((f) => f.type === draggingType);
-        if (!fieldDef) return;
+      // Drop a new field from sidebar
+      if (draggingType && canvasRef.current) {
+        const pos = getCanvasPct(e);
+        if (pos) {
+          const fieldDef = FIELD_TYPES.find((f) => f.type === draggingType);
+          if (fieldDef && containerWidth && pageHeight) {
+            const widthPct = (fieldDef.width / containerWidth) * 100;
+            const heightPct = (fieldDef.height / pageHeight) * 100;
 
-        const widthPct = (fieldDef.width / containerWidth) * 100;
-        const heightPct = (fieldDef.height / pageHeight) * 100;
+            const newFieldId = crypto.randomUUID();
+            const isSelfSigner = signers.find((s) => s.id === selectedSigner)?.isSelf;
+            const isSignatureType = draggingType === "SIGNATURE" || draggingType === "INITIALS";
 
-        const newFieldId = crypto.randomUUID();
-        const isSelfSigner = signers.find((s) => s.id === selectedSigner)?.isSelf;
-        const isSignatureType = draggingType === "SIGNATURE" || draggingType === "INITIALS";
+            let prefillValue: string | undefined;
+            if (isSelfSigner && isSignatureType && savedSignature) {
+              prefillValue = savedSignature;
+            }
 
-        // For self-signer signature fields, check if we have a saved signature
-        let prefillValue: string | undefined;
-        if (isSelfSigner && isSignatureType && savedSignature) {
-          prefillValue = savedSignature;
+            const newField: PlacedField = {
+              id: newFieldId,
+              type: draggingType,
+              signerId: selectedSigner,
+              page: currentPage,
+              posX: Math.max(0, Math.min(100 - widthPct, pos.pctX - widthPct / 2)),
+              posY: Math.max(0, Math.min(100 - heightPct, pos.pctY - heightPct / 2)),
+              width: widthPct,
+              height: heightPct,
+              value: prefillValue,
+            };
+
+            onFieldsChange([...fields, newField]);
+            setSelectedField(newFieldId);
+
+            if (isSelfSigner && isSignatureType && !savedSignature) {
+              setPendingFieldId(newFieldId);
+              setShowSignatureModal(true);
+              setSignatureMode("draw");
+              setTypedSignature("");
+            }
+          }
         }
-
-        const newField: PlacedField = {
-          id: newFieldId,
-          type: draggingType,
-          signerId: selectedSigner,
-          page: currentPage,
-          posX: Math.max(0, Math.min(100 - widthPct, pctX - widthPct / 2)),
-          posY: Math.max(0, Math.min(100 - heightPct, pctY - heightPct / 2)),
-          width: widthPct,
-          height: heightPct,
-          value: prefillValue,
-        };
-
-        onFieldsChange([...fields, newField]);
-        setSelectedField(newFieldId);
         setDraggingType(null);
-
-        // If self-signer + signature + no saved signature => open modal
-        if (isSelfSigner && isSignatureType && !savedSignature) {
-          setPendingFieldId(newFieldId);
-          setShowSignatureModal(true);
-          setSignatureMode("draw");
-          setTypedSignature("");
-        }
+        setGhostPos(null);
       }
-    },
-    [draggingType, movingField, moveOffset, selectedSigner, fields, onFieldsChange, containerWidth, pageHeight, currentPage, signers, savedSignature]
-  );
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isResizing, containerWidth, pageHeight, fields, onFieldsChange, movingField, moveOffset, draggingType, getCanvasPct, zoom, selectedSigner, signers, savedSignature, currentPage]);
 
   // Canvas click - deselect field if clicking on empty area
   const handleCanvasClick = useCallback(
     (e: React.MouseEvent) => {
-      if (draggingType || movingField) {
-        handleFieldDrop(e);
-      } else {
+      if (!draggingType && !movingField) {
         setSelectedField(null);
       }
     },
-    [draggingType, movingField, handleFieldDrop]
+    [draggingType, movingField]
   );
 
   function removeField(id: string) {
@@ -332,8 +360,8 @@ export function FieldPlacement({
     const style = getComputedStyle(canvasRef.current);
     const borderLeft = parseFloat(style.borderLeftWidth) || 0;
     const borderTop = parseFloat(style.borderTopWidth) || 0;
-    const clickPctX = ((e.clientX - rect.left - borderLeft) / containerWidth) * 100;
-    const clickPctY = ((e.clientY - rect.top - borderTop) / pageHeight) * 100;
+    const clickPctX = (((e.clientX - rect.left - borderLeft) / zoom) / containerWidth) * 100;
+    const clickPctY = (((e.clientY - rect.top - borderTop) / zoom) / pageHeight) * 100;
     setMoveOffset({ x: clickPctX - fieldPctX, y: clickPctY - fieldPctY });
     setMovingField(fieldId);
   }
@@ -532,38 +560,82 @@ export function FieldPlacement({
 
       {/* PDF Canvas area */}
       <div className="flex-1">
-        {/* Page navigation */}
-        {numPages > 1 && (
-          <div className="mb-3 flex items-center justify-center gap-3">
+        {/* Toolbar: page nav + zoom */}
+        <div className="mb-3 flex items-center justify-between">
+          {/* Page navigation */}
+          <div className="flex items-center gap-2">
+            {numPages > 1 && (
+              <>
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border bg-white text-sm transition-colors hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <span className="text-sm font-medium text-muted-foreground">
+                  Page {currentPage} of {numPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage((p) => Math.min(numPages, p + 1))}
+                  disabled={currentPage === numPages}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border bg-white text-sm transition-colors hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </>
+            )}
+          </div>
+
+          {/* Zoom controls */}
+          <div className="flex items-center gap-1.5 rounded-lg border bg-white px-2 py-1 shadow-sm">
             <button
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="flex h-8 w-8 items-center justify-center rounded-lg border bg-white text-sm transition-colors hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              onClick={() => setZoom((z) => Math.max(ZOOM_MIN, z - ZOOM_STEP))}
+              disabled={zoom <= ZOOM_MIN}
+              className="flex h-7 w-7 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Zoom out"
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ZoomOut className="h-4 w-4" />
             </button>
-            <span className="text-sm font-medium text-muted-foreground">
-              Page {currentPage} of {numPages}
+            <span className="min-w-[3rem] text-center text-xs font-medium text-slate-600">
+              {Math.round(zoom * 100)}%
             </span>
             <button
-              onClick={() => setCurrentPage((p) => Math.min(numPages, p + 1))}
-              disabled={currentPage === numPages}
-              className="flex h-8 w-8 items-center justify-center rounded-lg border bg-white text-sm transition-colors hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              onClick={() => setZoom((z) => Math.min(ZOOM_MAX, z + ZOOM_STEP))}
+              disabled={zoom >= ZOOM_MAX}
+              className="flex h-7 w-7 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Zoom in"
             >
-              <ChevronRight className="h-4 w-4" />
+              <ZoomIn className="h-4 w-4" />
             </button>
+            {zoom !== 1 && (
+              <button
+                onClick={() => setZoom(1)}
+                className="flex h-7 w-7 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                title="Reset zoom"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
-        )}
+        </div>
 
+        <div className="overflow-auto rounded-xl" style={{ maxHeight: "75vh" }}>
         <div
           ref={canvasRef}
           onClick={handleCanvasClick}
           className={cn(
-            "relative rounded-xl border-2 bg-white shadow-sm overflow-hidden transition-colors",
+            "relative border-2 bg-white shadow-sm overflow-hidden transition-colors",
             draggingType || movingField
               ? "border-primary/50 cursor-crosshair"
-              : "border-slate-200"
+              : "border-slate-200",
+            zoom === 1 ? "rounded-xl" : ""
           )}
+          style={{
+            transform: `scale(${zoom})`,
+            transformOrigin: "top left",
+            width: zoom !== 1 ? `${100 / zoom}%` : undefined,
+          }}
         >
           {/* PDF rendering */}
           {!file ? (
@@ -705,10 +777,11 @@ export function FieldPlacement({
           {(draggingType || movingField) && (
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-primary/[0.02]">
               <p className="rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary backdrop-blur-sm">
-                Click to place {draggingType ? getFieldLabel(draggingType) : "field"}
+                Drop field here
               </p>
             </div>
           )}
+        </div>
         </div>
       </div>
 
@@ -803,6 +876,19 @@ export function FieldPlacement({
               </Button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Ghost element following cursor while dragging new field from sidebar */}
+      {draggingType && ghostPos && (
+        <div
+          className="pointer-events-none fixed z-50 rounded border-2 border-primary/60 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary shadow-lg backdrop-blur-sm"
+          style={{
+            left: ghostPos.x + 12,
+            top: ghostPos.y + 12,
+          }}
+        >
+          {getFieldLabel(draggingType)}
         </div>
       )}
     </div>
