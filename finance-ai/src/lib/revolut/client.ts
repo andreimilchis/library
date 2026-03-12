@@ -2,11 +2,20 @@
  * Revolut Business API Client
  *
  * Handles authentication, token management, and API calls to Revolut Business API.
+ * Uses JWT Bearer client assertion (RS256) with X.509 certificate for OAuth.
  */
 
-const REVOLUT_API_URL = process.env.REVOLUT_USE_SANDBOX === "true"
-  ? process.env.REVOLUT_SANDBOX_URL || "https://sandbox-b2b.revolut.com/api/1.0"
-  : process.env.REVOLUT_API_URL || "https://b2b.revolut.com/api/1.0";
+import { SignJWT, importPKCS8 } from "jose";
+
+const REVOLUT_API_URL =
+  process.env.REVOLUT_USE_SANDBOX === "true"
+    ? process.env.REVOLUT_SANDBOX_URL || "https://sandbox-b2b.revolut.com/api/1.0"
+    : process.env.REVOLUT_API_URL || "https://b2b.revolut.com/api/1.0";
+
+const REVOLUT_AUTH_URL =
+  process.env.REVOLUT_USE_SANDBOX === "true"
+    ? "https://sandbox-business.revolut.com/app-confirm"
+    : "https://business.revolut.com/app-confirm";
 
 export interface RevolutTokenResponse {
   access_token: string;
@@ -48,6 +57,35 @@ export interface RevolutTransaction {
   };
 }
 
+/**
+ * Generates a JWT client assertion signed with the private key.
+ * Revolut requires this for OAuth token requests.
+ */
+async function generateClientAssertion(): Promise<string> {
+  const privateKeyPem = process.env.REVOLUT_PRIVATE_KEY;
+  const clientId = process.env.REVOLUT_CLIENT_ID;
+
+  if (!privateKeyPem || !clientId) {
+    throw new Error("REVOLUT_PRIVATE_KEY and REVOLUT_CLIENT_ID must be set");
+  }
+
+  // Handle escaped newlines in env var (common when setting via Vercel dashboard)
+  const normalizedPem = privateKeyPem.replace(/\\n/g, "\n");
+
+  const privateKey = await importPKCS8(normalizedPem, "RS256");
+
+  const tokenEndpoint = `${REVOLUT_API_URL}/auth/token`;
+
+  return new SignJWT({})
+    .setProtectedHeader({ alg: "RS256" })
+    .setIssuer(clientId)
+    .setSubject(clientId)
+    .setAudience(tokenEndpoint)
+    .setIssuedAt()
+    .setExpirationTime("60s")
+    .sign(privateKey);
+}
+
 export class RevolutClient {
   private accessToken: string;
 
@@ -82,12 +120,14 @@ export class RevolutClient {
     return this.request<RevolutAccount>(`/accounts/${accountId}`);
   }
 
-  async getTransactions(params: {
-    from?: string;
-    to?: string;
-    count?: number;
-    type?: string;
-  } = {}): Promise<RevolutTransaction[]> {
+  async getTransactions(
+    params: {
+      from?: string;
+      to?: string;
+      count?: number;
+      type?: string;
+    } = {}
+  ): Promise<RevolutTransaction[]> {
     const searchParams = new URLSearchParams();
     if (params.from) searchParams.set("from", params.from);
     if (params.to) searchParams.set("to", params.to);
@@ -103,6 +143,8 @@ export class RevolutClient {
   }
 
   static async exchangeAuthorizationCode(code: string): Promise<RevolutTokenResponse> {
+    const clientAssertion = await generateClientAssertion();
+
     const response = await fetch(`${REVOLUT_API_URL}/auth/token`, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -111,7 +153,8 @@ export class RevolutClient {
         code,
         client_id: process.env.REVOLUT_CLIENT_ID || "",
         client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
-        client_assertion: process.env.REVOLUT_CLIENT_SECRET || "",
+        client_assertion: clientAssertion,
+        redirect_uri: process.env.REVOLUT_REDIRECT_URI || "",
       }),
     });
 
@@ -124,6 +167,8 @@ export class RevolutClient {
   }
 
   static async refreshAccessToken(refreshToken: string): Promise<RevolutTokenResponse> {
+    const clientAssertion = await generateClientAssertion();
+
     const response = await fetch(`${REVOLUT_API_URL}/auth/token`, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -132,7 +177,7 @@ export class RevolutClient {
         refresh_token: refreshToken,
         client_id: process.env.REVOLUT_CLIENT_ID || "",
         client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
-        client_assertion: process.env.REVOLUT_CLIENT_SECRET || "",
+        client_assertion: clientAssertion,
       }),
     });
 
@@ -151,6 +196,6 @@ export class RevolutClient {
       redirect_uri: process.env.REVOLUT_REDIRECT_URI || "",
       scope: "READ",
     });
-    return `${REVOLUT_API_URL}/auth/authorize?${params.toString()}`;
+    return `${REVOLUT_AUTH_URL}?${params.toString()}`;
   }
 }
