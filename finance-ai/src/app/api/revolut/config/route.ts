@@ -24,7 +24,11 @@ export async function GET() {
       REVOLUT_CLIENT_ID: !!clientId,
       REVOLUT_REDIRECT_URI: !!redirectUri,
       REVOLUT_PRIVATE_KEY: !!privateKey,
+      REVOLUT_USE_SANDBOX: process.env.REVOLUT_USE_SANDBOX || "not set",
     },
+    // Show partial client_id for debugging (first 8 chars)
+    clientIdPreview: clientId ? clientId.slice(0, 8) + "..." : "empty",
+    redirectUri: redirectUri || "empty",
     useSandbox,
     hasActiveConnection,
   });
