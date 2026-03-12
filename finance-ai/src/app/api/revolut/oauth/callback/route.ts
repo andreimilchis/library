@@ -31,7 +31,11 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.redirect(new URL("/settings?connected=true", request.url));
   } catch (error) {
-    console.error("OAuth callback error:", error);
-    return NextResponse.redirect(new URL("/settings?error=oauth_failed", request.url));
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error("OAuth callback error:", errorMessage);
+    const errorUrl = new URL("/settings", request.url);
+    errorUrl.searchParams.set("error", "oauth_failed");
+    errorUrl.searchParams.set("details", errorMessage.slice(0, 200));
+    return NextResponse.redirect(errorUrl);
   }
 }

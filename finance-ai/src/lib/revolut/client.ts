@@ -64,9 +64,21 @@ export interface RevolutTransaction {
 async function generateClientAssertion(): Promise<string> {
   const privateKeyPem = process.env.REVOLUT_PRIVATE_KEY;
   const clientId = process.env.REVOLUT_CLIENT_ID;
+  const redirectUri = process.env.REVOLUT_REDIRECT_URI;
 
   if (!privateKeyPem || !clientId) {
     throw new Error("REVOLUT_PRIVATE_KEY and REVOLUT_CLIENT_ID must be set");
+  }
+
+  // Extract domain from redirect URI to use as JWT issuer
+  // Revolut expects the issuer to be the redirect URI domain, not the client_id
+  let issuer = clientId;
+  if (redirectUri) {
+    try {
+      issuer = new URL(redirectUri).hostname;
+    } catch {
+      // Fall back to clientId if redirect URI is invalid
+    }
   }
 
   // Handle escaped newlines in env var (common when setting via Vercel dashboard)
@@ -78,7 +90,7 @@ async function generateClientAssertion(): Promise<string> {
 
   return new SignJWT({})
     .setProtectedHeader({ alg: "RS256" })
-    .setIssuer(clientId)
+    .setIssuer(issuer)
     .setSubject(clientId)
     .setAudience(tokenEndpoint)
     .setIssuedAt()
