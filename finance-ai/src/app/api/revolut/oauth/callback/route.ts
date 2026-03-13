@@ -1,13 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { RevolutClient } from "@/lib/revolut/client";
 import { prisma } from "@/lib/db";
 
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
+  const state = request.nextUrl.searchParams.get("state");
 
   if (!code) {
     return NextResponse.json({ error: "Missing authorization code" }, { status: 400 });
   }
+
+  // Validate state parameter for CSRF protection
+  const cookieStore = await cookies();
+  const savedState = cookieStore.get("revolut_oauth_state")?.value;
+  if (savedState && state !== savedState) {
+    return NextResponse.json({ error: "Invalid state parameter" }, { status: 403 });
+  }
+  // Clear the state cookie
+  cookieStore.delete("revolut_oauth_state");
 
   try {
     const tokens = await RevolutClient.exchangeAuthorizationCode(code);

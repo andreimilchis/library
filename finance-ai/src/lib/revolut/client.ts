@@ -86,13 +86,11 @@ async function generateClientAssertion(): Promise<string> {
 
   const privateKey = await importPKCS8(normalizedPem, "RS256");
 
-  const tokenEndpoint = `${REVOLUT_API_URL}/auth/token`;
-
   return new SignJWT({})
     .setProtectedHeader({ alg: "RS256" })
     .setIssuer(issuer)
     .setSubject(clientId)
-    .setAudience(tokenEndpoint)
+    .setAudience("https://revolut.com")
     .setIssuedAt()
     .setExpirationTime("60s")
     .sign(privateKey);
@@ -201,13 +199,15 @@ export class RevolutClient {
     return response.json() as Promise<RevolutTokenResponse>;
   }
 
-  static getAuthorizationUrl(): string {
+  static getAuthorizationUrl(state?: string): string {
     const params = new URLSearchParams({
       client_id: process.env.REVOLUT_CLIENT_ID || "",
       response_type: "code",
       redirect_uri: process.env.REVOLUT_REDIRECT_URI || "",
-      scope: "READ",
     });
+    if (state) {
+      params.set("state", state);
+    }
     return `${REVOLUT_AUTH_URL}?${params.toString()}`;
   }
 }
