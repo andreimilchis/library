@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { RevolutClient } from "@/lib/revolut/client";
 import { prisma } from "@/lib/db";
 
@@ -12,13 +11,10 @@ export async function GET(request: NextRequest) {
   }
 
   // Validate state parameter for CSRF protection
-  const cookieStore = await cookies();
-  const savedState = cookieStore.get("revolut_oauth_state")?.value;
+  const savedState = request.cookies.get("revolut_oauth_state")?.value;
   if (savedState && state !== savedState) {
     return NextResponse.json({ error: "Invalid state parameter" }, { status: 403 });
   }
-  // Clear the state cookie
-  cookieStore.delete("revolut_oauth_state");
 
   try {
     const tokens = await RevolutClient.exchangeAuthorizationCode(code);
@@ -40,13 +36,17 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    return NextResponse.redirect(new URL("/settings?connected=true", request.url));
+    const response = NextResponse.redirect(new URL("/settings?connected=true", request.url));
+    response.cookies.delete("revolut_oauth_state");
+    return response;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error("OAuth callback error:", errorMessage);
     const errorUrl = new URL("/settings", request.url);
     errorUrl.searchParams.set("error", "oauth_failed");
     errorUrl.searchParams.set("details", errorMessage.slice(0, 200));
-    return NextResponse.redirect(errorUrl);
+    const response = NextResponse.redirect(errorUrl);
+    response.cookies.delete("revolut_oauth_state");
+    return response;
   }
 }

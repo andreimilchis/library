@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { RevolutClient } from "@/lib/revolut/client";
 
 export async function GET() {
@@ -23,8 +22,12 @@ export async function GET() {
 
   // Generate a random state parameter for CSRF protection
   const state = crypto.randomUUID();
-  const cookieStore = await cookies();
-  cookieStore.set("revolut_oauth_state", state, {
+
+  const url = RevolutClient.getAuthorizationUrl(state);
+  const response = NextResponse.redirect(url);
+
+  // Set cookie directly on the response to ensure it's included with the redirect
+  response.cookies.set("revolut_oauth_state", state, {
     httpOnly: true,
     secure: true,
     sameSite: "lax",
@@ -32,6 +35,5 @@ export async function GET() {
     path: "/",
   });
 
-  const url = RevolutClient.getAuthorizationUrl(state);
-  return NextResponse.redirect(url);
+  return response;
 }
