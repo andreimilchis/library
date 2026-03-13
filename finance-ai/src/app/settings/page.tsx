@@ -16,10 +16,17 @@ export default function SettingsPage() {
   } | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [classifying, setClassifying] = useState(false);
+  const [configStatus, setConfigStatus] = useState<{
+    configured: boolean;
+    envVars: { REVOLUT_CLIENT_ID: boolean; REVOLUT_REDIRECT_URI: boolean; REVOLUT_PRIVATE_KEY: boolean };
+    useSandbox: boolean;
+    hasActiveConnection: boolean;
+  } | null>(null);
 
   useEffect(() => {
     fetch("/api/revolut/accounts").then((r) => r.json()).then((d) => setAccounts(d.accounts || []));
     fetch("/api/classifications").then((r) => r.json()).then((d) => setClassificationStats(d));
+    fetch("/api/revolut/config").then((r) => r.json()).then((d) => setConfigStatus(d));
   }, []);
 
   const handleConnect = () => {
@@ -62,8 +69,33 @@ export default function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {configStatus && !configStatus.configured && (
+            <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-sm space-y-1">
+              <p className="font-medium text-destructive">Revolut API not configured</p>
+              <p className="text-muted-foreground">
+                Set the following environment variables in Vercel:
+              </p>
+              <ul className="list-disc list-inside text-muted-foreground text-xs">
+                {!configStatus.envVars.REVOLUT_CLIENT_ID && <li>REVOLUT_CLIENT_ID</li>}
+                {!configStatus.envVars.REVOLUT_REDIRECT_URI && <li>REVOLUT_REDIRECT_URI</li>}
+                {!configStatus.envVars.REVOLUT_PRIVATE_KEY && <li>REVOLUT_PRIVATE_KEY</li>}
+              </ul>
+            </div>
+          )}
+
+          {configStatus?.hasActiveConnection && (
+            <div className="p-3 rounded-lg bg-green-50 border border-green-200 text-sm">
+              <p className="font-medium text-green-700">Connected to Revolut</p>
+              <p className="text-green-600 text-xs">
+                {configStatus.useSandbox ? "Sandbox mode" : "Production mode"}
+              </p>
+            </div>
+          )}
+
           <div className="flex items-center gap-4">
-            <Button onClick={handleConnect}>Connect Revolut</Button>
+            <Button onClick={handleConnect} disabled={configStatus !== null && !configStatus.configured}>
+              Connect Revolut
+            </Button>
             <Button variant="outline" onClick={handleSyncAccounts} disabled={syncing}>
               <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
               Sync Accounts
