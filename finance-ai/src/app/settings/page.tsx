@@ -1,12 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Settings, Link2, RefreshCw, Database, Brain } from "lucide-react";
 
 export default function SettingsPage() {
+  const searchParams = useSearchParams();
+  const oauthError = searchParams.get("error");
+  const oauthErrorDetails = searchParams.get("details");
+  const oauthConnected = searchParams.get("connected");
+
   const [accounts, setAccounts] = useState<Array<{ id: string; name: string; balance: number; currency: string }>>([]);
   const [classificationStats, setClassificationStats] = useState<{
     pending: number;
@@ -69,6 +75,21 @@ export default function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {oauthConnected === "true" && configStatus?.hasActiveConnection && (
+            <div className="p-3 rounded-lg bg-green-50 border border-green-200 text-sm">
+              <p className="font-medium text-green-700">Successfully connected to Revolut!</p>
+            </div>
+          )}
+
+          {oauthError && (
+            <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-sm space-y-1">
+              <p className="font-medium text-destructive">OAuth connection failed</p>
+              {oauthErrorDetails && (
+                <p className="text-muted-foreground text-xs break-all">{oauthErrorDetails}</p>
+              )}
+            </div>
+          )}
+
           {configStatus && !configStatus.configured && (
             <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-sm space-y-1">
               <p className="font-medium text-destructive">Revolut API not configured</p>
