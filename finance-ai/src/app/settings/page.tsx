@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Settings, Link2, RefreshCw, Database, Brain } from "lucide-react";
+import { Link2, RefreshCw, Database, Brain } from "lucide-react";
 
-export default function SettingsPage() {
+function SettingsContent() {
   const searchParams = useSearchParams();
   const oauthError = searchParams.get("error");
   const oauthErrorDetails = searchParams.get("details");
@@ -206,5 +206,13 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={<div className="p-6">Loading settings...</div>}>
+      <SettingsContent />
+    </Suspense>
   );
 }
