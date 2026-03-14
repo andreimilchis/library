@@ -1,0 +1,24 @@
+{
+  "name": "eye1-ai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "eye1.ai — Personal Intelligence System",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test",
+    "db:generate": "pnpm --filter @eye1/db generate",
+    "db:migrate": "pnpm --filter @eye1/db migrate",
+    "db:push": "pnpm --filter @eye1/db push",
+    "db:seed": "pnpm --filter @eye1/db seed",
+    "clean": "turbo clean && rm -rf node_modules"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

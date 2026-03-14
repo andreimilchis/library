@@ -1,0 +1,24 @@
+{
+  "name": "@eye1/worker",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@eye1/common": "workspace:*",
+    "@eye1/db": "workspace:*",
+    "@eye1/connectors": "workspace:*",
+    "@eye1/ingestion": "workspace:*",
+    "@eye1/queue": "workspace:*",
+    "@eye1/agents": "workspace:*",
+    "bullmq": "^5.0.0",
+    "ioredis": "^5.4.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.0"
+  }
+}
