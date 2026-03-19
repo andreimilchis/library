@@ -1,0 +1,164 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ==================== AUTH MODELS ====================
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         UserRole @default(MEMBER)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  documents Document[]
+  sessions  Session[]
+
+  @@map("users")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+enum UserRole {
+  ADMIN
+  MEMBER
+}
+
+// ==================== DOCUMENT ====================
+
+model Document {
+  id             String         @id @default(cuid())
+  name           String
+  status         DocumentStatus @default(DRAFT)
+  originalPdfUrl String
+  signedPdfUrl   String?
+  message        String?
+  userId         String
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  signers  DocumentSigner[]
+  fields   DocumentField[]
+  auditLog DocumentAuditLog[]
+
+  @@index([userId, status])
+  @@index([createdAt])
+  @@map("documents")
+}
+
+enum DocumentStatus {
+  DRAFT
+  PENDING
+  COMPLETED
+  DECLINED
+  EXPIRED
+}
+
+// ==================== SIGNER ====================
+
+model DocumentSigner {
+  id          String       @id @default(cuid())
+  documentId  String
+  name        String
+  email       String
+  role        SignerRole   @default(SIGNER)
+  status      SignerStatus @default(PENDING)
+  signingToken String     @unique @default(cuid())
+  signedAt    DateTime?
+  signerIp    String?
+  order       Int          @default(0)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  document Document        @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  fields   DocumentField[]
+  auditLog DocumentAuditLog[]
+
+  @@index([documentId])
+  @@index([signingToken])
+  @@map("document_signers")
+}
+
+enum SignerRole {
+  SIGNER
+  VIEWER
+  APPROVER
+}
+
+enum SignerStatus {
+  PENDING
+  SIGNED
+  DECLINED
+}
+
+// ==================== DOCUMENT FIELD ====================
+
+model DocumentField {
+  id         String    @id @default(cuid())
+  documentId String
+  signerId   String
+  type       FieldType
+  page       Int       @default(1)
+  posX       Float
+  posY       Float
+  width      Float
+  height     Float
+  value      String?
+  required   Boolean   @default(true)
+  placeholder String?
+  createdAt  DateTime  @default(now())
+
+  document Document       @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  signer   DocumentSigner @relation(fields: [signerId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@map("document_fields")
+}
+
+enum FieldType {
+  SIGNATURE
+  INITIALS
+  DATE_SIGNED
+  FULL_NAME
+  EMAIL
+  COMPANY
+  TITLE
+  TEXT
+}
+
+// ==================== AUDIT LOG ====================
+
+model DocumentAuditLog {
+  id         String   @id @default(cuid())
+  documentId String
+  signerId   String?
+  action     String
+  details    String?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  document Document        @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  signer   DocumentSigner? @relation(fields: [signerId], references: [id], onDelete: SetNull)
+
+  @@index([documentId])
+  @@index([createdAt])
+  @@map("document_audit_logs")
+}
