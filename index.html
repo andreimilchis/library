@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SuportClienti.AI — Suport clienți automatizat cu AI pentru companii din România</title>
+    <meta name="description" content="Automatizează suportul pentru clienți cu inteligență artificială. Reducere costuri cu 60%, răspuns instant 24/7, integrare WhatsApp, chat și email.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <!-- NAVBAR -->
+    <nav class="navbar" id="navbar">
+        <div class="container navbar__inner">
+            <a href="#" class="navbar__logo">
+                <span class="logo-icon">◆</span>
+                suportclienti<span class="logo-accent">.ai</span>
+            </a>
+            <div class="navbar__links" id="navLinks">
+                <a href="#solutia">Soluția</a>
+                <a href="#beneficii">Beneficii</a>
+                <a href="#cum-functioneaza">Cum funcționează</a>
+                <a href="#cazuri-de-uz">Cazuri de uz</a>
+                <a href="#contact" class="btn btn--sm">Programează o întâlnire</a>
+            </div>
+            <button class="navbar__toggle" id="navToggle" aria-label="Meniu">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- HERO SECTION -->
+    <section class="hero">
+        <div class="container hero__inner">
+            <div class="hero__content">
+                <div class="hero__badge">Infrastructură AI pentru suport clienți</div>
+                <h1 class="hero__title">Suportul tău pentru clienți,<br><span class="text-gradient">complet automatizat.</span></h1>
+                <p class="hero__subtitle">Sistem AI care preia, rezolvă și optimizează interacțiunile cu clienții tăi — pe WhatsApp, chat și email — fără intervenție umană.</p>
+                <ul class="hero__bullets">
+                    <li>
+                        <span class="bullet-icon">↓</span>
+                        <span><strong>Reducere cu 60%</strong> a costurilor operaționale de suport</span>
+                    </li>
+                    <li>
+                        <span class="bullet-icon">⚡</span>
+                        <span><strong>Răspuns sub 3 secunde</strong>, 24 de ore din 24, 7 zile din 7</span>
+                    </li>
+                    <li>
+                        <span class="bullet-icon">↑</span>
+                        <span><strong>Scalare imediată</strong> fără angajări suplimentare</span>
+                    </li>
+                </ul>
+                <div class="hero__cta">
+                    <a href="#contact" class="btn btn--primary btn--lg">Programează o întâlnire</a>
+                    <span class="hero__cta-note">Fără obligații. Discuție de 30 min.</span>
+                </div>
+            </div>
+            <div class="hero__visual">
+                <div class="hero__mockup">
+                    <div class="mockup-window">
+                        <div class="mockup-header">
+                            <span class="dot dot--red"></span>
+                            <span class="dot dot--yellow"></span>
+                            <span class="dot dot--green"></span>
+                        </div>
+                        <div class="mockup-body">
+                            <div class="chat-bubble chat-bubble--incoming">
+                                <span class="chat-label">Client</span>
+                                Bună ziua, vreau să returnez comanda #4521.
+                            </div>
+                            <div class="chat-bubble chat-bubble--ai">
+                                <span class="chat-label">AI Agent</span>
+                                Bună! Am identificat comanda #4521. Procesez returul acum — veți primi confirmarea pe email în 2 minute.
+                            </div>
+                            <div class="chat-bubble chat-bubble--system">
+                                <span class="status-dot"></span>
+                                Retur procesat automat · 3.2s timp de răspuns
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mockup-stats">
+                        <div class="stat-card">
+                            <span class="stat-value">94%</span>
+                            <span class="stat-label">Rezolvare automată</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-value">2.1s</span>
+                            <span class="stat-label">Timp mediu răspuns</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SOCIAL PROOF BAR -->
+    <section class="social-proof">
+        <div class="container">
+            <p class="social-proof__label">Tehnologie folosită de companii care prioritizează experiența clienților</p>
+            <div class="social-proof__logos">
+                <div class="logo-placeholder">Logo Client</div>
+                <div class="logo-placeholder">Logo Client</div>
+                <div class="logo-placeholder">Logo Client</div>
+                <div class="logo-placeholder">Logo Client</div>
+                <div class="logo-placeholder">Logo Client</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- PROBLEM SECTION -->
+    <section class="section problem" id="problema">
+        <div class="container">
+            <div class="section__header">
+                <span class="section__tag">Problema</span>
+                <h2 class="section__title">Suportul pentru clienți te costă mai mult decât crezi.</h2>
+                <p class="section__desc">Companiile din România pierd bani, clienți și reputație din cauza unui suport lent, inconsistent și greu de scalat.</p>
+            </div>
+            <div class="problems-grid">
+                <div class="problem-card">
+                    <div class="problem-card__icon">💰</div>
+                    <h3>Costuri care cresc constant</h3>
+                    <p>Fiecare agent de suport înseamnă salariu, training, management. Costurile cresc liniar cu volumul, dar profitul nu.</p>
+                </div>
+                <div class="problem-card">
+                    <div class="problem-card__icon">⏳</div>
+                    <h3>Clienți care nu mai așteaptă</h3>
+                    <p>Timpul mediu de răspuns în suport depășește 4 ore. 53% dintre clienți abandonează dacă nu primesc răspuns în 10 minute.</p>
+                </div>
+                <div class="problem-card">
+                    <div class="problem-card__icon">😩</div>
+                    <h3>Echipe suprasolicitate</h3>
+                    <p>Agenții gestionează prea multe conversații simultan. Calitatea scade. Rata de turnover crește. Ciclul se repetă.</p>
+                </div>
+                <div class="problem-card">
+                    <div class="problem-card__icon">📉</div>
+                    <h3>Clienți pierduți în tăcere</h3>
+                    <p>Clienții nemulțumiți nu reclamă — pleacă. Fiecare interacțiune slabă este o oportunitate de venit pierdută permanent.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SOLUTION SECTION -->
+    <section class="section solution" id="solutia">
+        <div class="container">
+            <div class="section__header">
+                <span class="section__tag">Soluția</span>
+                <h2 class="section__title">Un sistem AI care preia suportul, nu doar îl asistă.</h2>
+                <p class="section__desc">SuportClienti.AI nu este un chatbot simplu. Este o infrastructură completă care înțelege, decide și rezolvă — exact cum ar face cel mai bun agent al tău, dar instant și non-stop.</p>
+            </div>
+            <div class="solution-grid">
+                <div class="solution-card">
+                    <div class="solution-card__number">01</div>
+                    <h3>Agenți AI specializați</h3>
+                    <p>Fiecare tip de cerere (retururi, informații, reclamații, comenzi) este gestionat de un agent AI antrenat specific pe procesele tale.</p>
+                </div>
+                <div class="solution-card">
+                    <div class="solution-card__number">02</div>
+                    <h3>Integrare nativă multi-canal</h3>
+                    <p>WhatsApp, chat pe site, email, Facebook Messenger — toate conversațiile într-un singur sistem, cu aceeași calitate a răspunsului.</p>
+                </div>
+                <div class="solution-card">
+                    <div class="solution-card__number">03</div>
+                    <h3>Automatizare end-to-end</h3>
+                    <p>AI-ul nu doar răspunde. Procesează retururi, actualizează comenzi, trimite confirmări. Acțiuni reale, nu doar conversații.</p>
+                </div>
+                <div class="solution-card">
+                    <div class="solution-card__number">04</div>
+                    <h3>Învățare continuă</h3>
+                    <p>Sistemul se îmbunătățește cu fiecare interacțiune. Analizează pattern-uri, identifică probleme recurente și optimizează automat răspunsurile.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- BENEFITS SECTION -->
+    <section class="section benefits" id="beneficii">
+        <div class="container">
+            <div class="section__header">
+                <span class="section__tag">Beneficii</span>
+                <h2 class="section__title">Impact direct în P&L, nu doar în helpdesk.</h2>
+            </div>
+            <div class="benefits-grid">
+                <div class="benefit-card">
+                    <div class="benefit-card__metric">-60%</div>
+                    <h3>Costuri operaționale reduse</h3>
+                    <p>Elimini nevoia de a angaja proporțional cu volumul de cereri. Același sistem gestionează 100 sau 10.000 de conversații.</p>
+                </div>
+                <div class="benefit-card">
+                    <div class="benefit-card__metric">24/7</div>
+                    <h3>Disponibilitate non-stop</h3>
+                    <p>Clienții tăi primesc răspunsuri complete oricând, inclusiv noaptea, în weekend și de sărbători. Fără ture suplimentare.</p>
+                </div>
+                <div class="benefit-card">
+                    <div class="benefit-card__metric">∞</div>
+                    <h3>Scalare fără limite</h3>
+                    <p>Black Friday, campanii, sezonalitate — volumul crește, costurile rămân constante. Fără recrutări de urgență.</p>
+                </div>
+                <div class="benefit-card">
+                    <div class="benefit-card__metric">100%</div>
+                    <h3>Consistență în comunicare</h3>
+                    <p>Fiecare client primește același nivel de informare și profesionalism. Fără variații de dispoziție, experiență sau oboseală.</p>
+                </div>
+                <div class="benefit-card">
+                    <div class="benefit-card__metric">+35%</div>
+                    <h3>Satisfacție clienți crescută</h3>
+                    <p>Răspuns rapid + rezolvare la prima interacțiune = clienți care rămân și recomandă. NPS-ul crește natural.</p>
+                </div>
+                <div class="benefit-card">
+                    <div class="benefit-card__metric">📊</div>
+                    <h3>Date și insights valoroase</h3>
+                    <p>Fiecare conversație generează date structurate. Înțelegi exact ce cer clienții, unde pierzi venituri și ce poți îmbunătăți.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section class="section how-it-works" id="cum-functioneaza">
+        <div class="container">
+            <div class="section__header">
+                <span class="section__tag">Cum funcționează</span>
+                <h2 class="section__title">De la integrare la automatizare completă, în 4 pași.</h2>
+            </div>
+            <div class="steps">
+                <div class="step">
+                    <div class="step__number">01</div>
+                    <div class="step__content">
+                        <h3>Integrare și configurare</h3>
+                        <p>Conectăm sistemul la canalele tale de comunicare și la baza de cunoștințe existentă. Fără migrări complicate.</p>
+                    </div>
+                    <div class="step__line"></div>
+                </div>
+                <div class="step">
+                    <div class="step__number">02</div>
+                    <div class="step__content">
+                        <h3>Antrenare pe datele tale</h3>
+                        <p>AI-ul învață din istoricul conversațiilor, din documentația produselor și din procedurile interne ale echipei tale.</p>
+                    </div>
+                    <div class="step__line"></div>
+                </div>
+                <div class="step">
+                    <div class="step__number">03</div>
+                    <div class="step__content">
+                        <h3>Automatizare conversații</h3>
+                        <p>Sistemul preia conversațiile, rezolvă cererile și escaladează inteligent doar cazurile care necesită intervenție umană.</p>
+                    </div>
+                    <div class="step__line"></div>
+                </div>
+                <div class="step">
+                    <div class="step__number">04</div>
+                    <div class="step__content">
+                        <h3>Optimizare continuă</h3>
+                        <p>Monitorizăm performanța, ajustăm răspunsurile și îmbunătățim constant rata de rezolvare automată.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- USE CASES -->
+    <section class="section use-cases" id="cazuri-de-uz">
+        <div class="container">
+            <div class="section__header">
+                <span class="section__tag">Cazuri de uz</span>
+                <h2 class="section__title">Construit pentru industriile cu volum mare de interacțiuni.</h2>
+            </div>
+            <div class="usecases-grid">
+                <div class="usecase-card">
+                    <div class="usecase-card__icon">🛒</div>
+                    <h3>eCommerce</h3>
+                    <p>Gestionare automată a întrebărilor despre comenzi, livrări, retururi și schimburi. Integrare cu platformele de eCommerce existente.</p>
+                    <ul class="usecase-card__list">
+                        <li>Status comandă în timp real</li>
+                        <li>Procesare retururi automat</li>
+                        <li>Recomandări produse personalizate</li>
+                    </ul>
+                </div>
+                <div class="usecase-card">
+                    <div class="usecase-card__icon">🏢</div>
+                    <h3>Servicii profesionale</h3>
+                    <p>Programări, informații despre servicii, urmărire cereri. Automatizare pentru companiile unde timpul de răspuns contează cel mai mult.</p>
+                    <ul class="usecase-card__list">
+                        <li>Programări automate</li>
+                        <li>Calificare cereri noi</li>
+                        <li>Follow-up automat post-serviciu</li>
+                    </ul>
+                </div>
+                <div class="usecase-card">
+                    <div class="usecase-card__icon">📞</div>
+                    <h3>Înlocuire call center</h3>
+                    <p>Migrare de la call center tradițional la suport digital automatizat. Aceeași capacitate, o fracțiune din cost.</p>
+                    <ul class="usecase-card__list">
+                        <li>Deflectare apeluri spre chat AI</li>
+                        <li>Rezolvare tier 1 complet automatizată</li>
+                        <li>Escaladare inteligentă la agenți</li>
+                    </ul>
+                </div>
+                <div class="usecase-card">
+                    <div class="usecase-card__icon">🎯</div>
+                    <h3>Calificare lead-uri</h3>
+                    <p>AI-ul califică lead-urile prin conversații naturale, colectează informații relevante și le direcționează către echipa de vânzări.</p>
+                    <ul class="usecase-card__list">
+                        <li>Calificare automată 24/7</li>
+                        <li>Scoring lead-uri bazat pe conversație</li>
+                        <li>Transfer cald către sales</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- TRUST SECTION -->
+    <section class="section trust" id="incredere">
+        <div class="container">
+            <div class="section__header">
+                <span class="section__tag">De ce noi</span>
+                <h2 class="section__title">Construit pentru companii care nu fac compromisuri.</h2>
+            </div>
+            <div class="trust-grid">
+                <div class="trust-card">
+                    <h3>Tehnologie AI de ultimă generație</h3>
+                    <p>Folosim modele de limbaj avansate, optimizate pentru limba română și pentru contextul de business local. Nu este un chatbot cu răspunsuri pre-definite.</p>
+                </div>
+                <div class="trust-card">
+                    <h3>Integrare personalizată</h3>
+                    <p>Fiecare implementare este adaptată proceselor tale. Nu primești un produs generic — primești un sistem configurat pe fluxurile tale reale.</p>
+                </div>
+                <div class="trust-card">
+                    <h3>Scalabilitate enterprise</h3>
+                    <p>Infrastructura suportă de la sute la zeci de mii de conversații zilnice. Crești fără să schimbi sistemul.</p>
+                </div>
+                <div class="trust-card">
+                    <h3>Securitate și conformitate</h3>
+                    <p>Date procesate conform GDPR. Infrastructură securizată. Control complet asupra informațiilor clienților tăi.</p>
+                </div>
+            </div>
+
+            <!-- Testimonials -->
+            <div class="testimonials">
+                <div class="testimonial-card">
+                    <div class="testimonial-card__stars">★★★★★</div>
+                    <blockquote>"Am redus echipa de suport de la 12 la 4 persoane și satisfacția clienților a crescut cu 40%. Sistemul gestionează 85% din cereri complet automat."</blockquote>
+                    <div class="testimonial-card__author">
+                        <div class="author-avatar"></div>
+                        <div>
+                            <strong>Nume Prenume</strong>
+                            <span>Director Operațiuni, Companie eCommerce</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="testimonial-card">
+                    <div class="testimonial-card__stars">★★★★★</div>
+                    <blockquote>"ROI pozitiv din prima lună. Costul per interacțiune a scăzut de la 4.2€ la 0.3€. Nu m-aș mai întoarce la modelul tradițional."</blockquote>
+                    <div class="testimonial-card__author">
+                        <div class="author-avatar"></div>
+                        <div>
+                            <strong>Nume Prenume</strong>
+                            <span>CEO, Companie Servicii</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Case Study Placeholder -->
+            <div class="case-study-cta">
+                <div class="case-study-cta__content">
+                    <h3>Studiu de caz: Cum a redus [Companie] costurile cu suportul cu 62%</h3>
+                    <p>Descarcă studiul de caz complet și vezi exact cum arată implementarea și rezultatele.</p>
+                </div>
+                <a href="#contact" class="btn btn--outline">Solicită studiul de caz</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA SECTION -->
+    <section class="section cta-section">
+        <div class="container">
+            <div class="cta-block">
+                <h2>Suportul tău pentru clienți poate fi mai bun, mai rapid și mai ieftin.</h2>
+                <p>Programează o discuție de 30 de minute cu echipa noastră. Analizăm procesul tău actual, identificăm unde pierzi bani și îți arătăm exact cum arată automatizarea.</p>
+                <div class="cta-block__features">
+                    <span>✓ Fără obligații contractuale</span>
+                    <span>✓ Analiză gratuită a procesului actual</span>
+                    <span>✓ Demo personalizat pe datele tale</span>
+                </div>
+                <a href="#contact" class="btn btn--primary btn--lg">Programează o întâlnire</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- CONTACT / FORM SECTION -->
+    <section class="section contact" id="contact">
+        <div class="container">
+            <div class="contact__inner">
+                <div class="contact__info">
+                    <span class="section__tag">Contact</span>
+                    <h2>Hai să discutăm concret.</h2>
+                    <p>Completează formularul și te contactăm în maximum 24 de ore pentru a stabili o întâlnire. Fără presiune, fără follow-up agresiv.</p>
+                    <div class="contact__details">
+                        <div class="contact__detail">
+                            <strong>Email</strong>
+                            <span>contact@suportclienti.ai</span>
+                        </div>
+                        <div class="contact__detail">
+                            <strong>Timp de răspuns</strong>
+                            <span>Sub 24 de ore</span>
+                        </div>
+                    </div>
+                </div>
+                <form class="contact-form" id="contactForm">
+                    <div class="form-group">
+                        <label for="name">Nume complet *</label>
+                        <input type="text" id="name" name="name" required placeholder="Ion Popescu">
+                    </div>
+                    <div class="form-group">
+                        <label for="company">Companie *</label>
+                        <input type="text" id="company" name="company" required placeholder="Numele companiei">
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email de business *</label>
+                        <input type="email" id="email" name="email" required placeholder="ion@companie.ro">
+                    </div>
+                    <div class="form-group">
+                        <label for="phone">Telefon</label>
+                        <input type="tel" id="phone" name="phone" placeholder="+40 7XX XXX XXX">
+                    </div>
+                    <div class="form-group form-group--full">
+                        <label for="message">Ce provocări ai cu suportul pentru clienți?</label>
+                        <textarea id="message" name="message" rows="4" placeholder="Descrie pe scurt situația actuală și ce te interesează..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn--primary btn--lg btn--full">Programează o întâlnire</button>
+                    <p class="form-disclaimer">Datele tale sunt protejate conform GDPR. Nu trimitem spam.</p>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="container footer__inner">
+            <div class="footer__brand">
+                <a href="#" class="navbar__logo">
+                    <span class="logo-icon">◆</span>
+                    suportclienti<span class="logo-accent">.ai</span>
+                </a>
+                <p>Infrastructură AI pentru suport clienți.<br>Construit în România, pentru companii din România.</p>
+            </div>
+            <div class="footer__links">
+                <a href="#solutia">Soluția</a>
+                <a href="#beneficii">Beneficii</a>
+                <a href="#cum-functioneaza">Cum funcționează</a>
+                <a href="#cazuri-de-uz">Cazuri de uz</a>
+                <a href="#contact">Contact</a>
+            </div>
+            <div class="footer__bottom">
+                <p>&copy; 2026 SuportClienti.AI. Toate drepturile rezervate.</p>
+                <div class="footer__legal">
+                    <a href="#">Politica de confidențialitate</a>
+                    <a href="#">Termeni și condiții</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
