@@ -81,6 +81,7 @@ model DocumentSigner {
   role        SignerRole   @default(SIGNER)
   status      SignerStatus @default(PENDING)
   signingToken String     @unique @default(cuid())
+  expiresAt   DateTime?
   signedAt    DateTime?
   signerIp    String?
   order       Int          @default(0)

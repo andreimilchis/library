@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendCompletionEmail } from "@/lib/email";
 import { generateSignedPdf, getSignedPdfBuffer } from "@/lib/pdf-generator";
+import { rateLimit } from "@/lib/rate-limit";
 
 // GET /api/sign/[token] - Get signing data for a token
 export async function GET(
@@ -44,6 +45,13 @@ export async function GET(
     );
   }
 
+  if (signer.expiresAt && new Date() > signer.expiresAt) {
+    return NextResponse.json(
+      { error: "This signing link has expired" },
+      { status: 410 }
+    );
+  }
+
   return NextResponse.json({
     document: signer.document,
     signer: {
@@ -62,6 +70,16 @@ export async function POST(
   { params }: { params: Promise<{ token: string }> }
 ) {
   const { token } = await params;
+
+  // Rate limit: 10 signing attempts per token per 15 minutes
+  const rl = rateLimit(`sign:${token}`, 10, 15 * 60 * 1000);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Too many attempts. Please try again later." },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfter) } }
+    );
+  }
+
   const body = await request.json();
   const { fieldValues } = body as { fieldValues: Record<string, string> };
 
@@ -89,6 +107,13 @@ export async function POST(
     return NextResponse.json(
       { error: "Already signed" },
       { status: 400 }
+    );
+  }
+
+  if (signer.expiresAt && new Date() > signer.expiresAt) {
+    return NextResponse.json(
+      { error: "This signing link has expired" },
+      { status: 410 }
     );
   }
 

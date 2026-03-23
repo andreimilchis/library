@@ -7,14 +7,17 @@ const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  // Create default admin user
+  const email = process.env.ADMIN_EMAIL || "admin@netkyu.com";
+  const password = process.env.ADMIN_PASSWORD || "admin123";
+  const name = process.env.ADMIN_NAME || "NETkyu Admin";
+
   const admin = await prisma.user.upsert({
-    where: { email: "admin@netkyu.com" },
+    where: { email },
     update: {},
     create: {
-      name: "NETkyu Admin",
-      email: "admin@netkyu.com",
-      passwordHash: hashSync("admin123", 10),
+      name,
+      email,
+      passwordHash: hashSync(password, 10),
       role: "ADMIN",
     },
   });

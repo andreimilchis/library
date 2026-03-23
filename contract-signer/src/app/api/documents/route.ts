@@ -4,29 +4,52 @@ import { prisma } from "@/lib/prisma";
 import { uploadFile } from "@/lib/storage";
 import { sendSigningEmail } from "@/lib/email";
 
-// GET /api/documents - List all documents for the current user
-export async function GET() {
+// GET /api/documents - List documents for the current user (paginated)
+export async function GET(request: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const documents = await prisma.document.findMany({
-    where: { userId: session.user.id },
-    include: {
-      signers: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          status: true,
+  const { searchParams } = new URL(request.url);
+  const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
+  const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") || "20")));
+  const status = searchParams.get("status");
+  const search = searchParams.get("search");
+
+  const where: Record<string, unknown> = { userId: session.user.id };
+  if (status) where.status = status;
+  if (search) where.name = { contains: search, mode: "insensitive" };
+
+  const [documents, total] = await Promise.all([
+    prisma.document.findMany({
+      where,
+      include: {
+        signers: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            status: true,
+          },
         },
       },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.document.count({ where }),
+  ]);
 
-  return NextResponse.json(documents);
+  return NextResponse.json({
+    documents,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  });
 }
 
 // POST /api/documents - Create a new document and send for signing
@@ -46,6 +69,21 @@ export async function POST(request: NextRequest) {
   if (!file || !name || !signersJson || !fieldsJson) {
     return NextResponse.json(
       { error: "Missing required fields" },
+      { status: 400 }
+    );
+  }
+
+  // Validate file type and size
+  const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+  if (file.size > MAX_FILE_SIZE) {
+    return NextResponse.json(
+      { error: "File too large. Maximum size is 20MB." },
+      { status: 400 }
+    );
+  }
+  if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+    return NextResponse.json(
+      { error: "Only PDF files are allowed." },
       { status: 400 }
     );
   }
@@ -81,14 +119,19 @@ export async function POST(request: NextRequest) {
       message,
       userId: session.user.id,
       signers: {
-        create: signers.map((s, i) => ({
-          name: s.name,
-          email: s.email,
-          order: i,
-          // Self-signer is immediately SIGNED
-          status: s.isSelf ? "SIGNED" : "PENDING",
-          signedAt: s.isSelf ? new Date() : undefined,
-        })),
+        create: signers.map((s, i) => {
+          const expiresAt = new Date();
+          expiresAt.setDate(expiresAt.getDate() + 30); // 30 days to sign
+          return {
+            name: s.name,
+            email: s.email,
+            order: i,
+            // Self-signer is immediately SIGNED
+            status: s.isSelf ? "SIGNED" as const : "PENDING" as const,
+            signedAt: s.isSelf ? new Date() : undefined,
+            expiresAt: s.isSelf ? undefined : expiresAt,
+          };
+        }),
       },
     },
     include: {

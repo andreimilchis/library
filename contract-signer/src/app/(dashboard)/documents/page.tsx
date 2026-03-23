@@ -1,17 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import {
   FileText,
   Plus,
   Download,
   Bell,
-  MoreHorizontal,
   Search,
   Clock,
   CheckCircle2,
   AlertCircle,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +38,13 @@ type DocumentWithSigners = {
     email: string;
     status: string;
   }[];
+};
+
+type Pagination = {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
 };
 
 function getStatusBadge(status: string) {
@@ -75,23 +83,44 @@ function getStatusBadge(status: string) {
 
 export default function DocumentsPage() {
   const [documents, setDocuments] = useState<DocumentWithSigners[]>([]);
+  const [pagination, setPagination] = useState<Pagination>({
+    page: 1,
+    limit: 20,
+    total: 0,
+    totalPages: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
 
+  // Debounce search
   useEffect(() => {
-    fetchDocuments();
-  }, []);
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
-  async function fetchDocuments() {
+  const fetchDocuments = useCallback(async (page: number, searchQuery: string) => {
+    setLoading(true);
     try {
-      const res = await fetch("/api/documents");
+      const params = new URLSearchParams({ page: String(page), limit: "20" });
+      if (searchQuery) params.set("search", searchQuery);
+      const res = await fetch(`/api/documents?${params}`);
       if (res.ok) {
         const data = await res.json();
-        setDocuments(data);
+        setDocuments(data.documents);
+        setPagination(data.pagination);
       }
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    fetchDocuments(1, debouncedSearch);
+  }, [debouncedSearch, fetchDocuments]);
+
+  function goToPage(page: number) {
+    fetchDocuments(page, debouncedSearch);
   }
 
   async function sendReminder(documentId: string) {
@@ -102,10 +131,6 @@ export default function DocumentsPage() {
       alert("Reminder sent successfully!");
     }
   }
-
-  const filteredDocuments = documents.filter((doc) =>
-    doc.name.toLowerCase().includes(search.toLowerCase())
-  );
 
   const pendingCount = documents.filter((d) => d.status === "PENDING").length;
   const completedCount = documents.filter(
@@ -134,7 +159,7 @@ export default function DocumentsPage() {
       <div className="grid grid-cols-3 gap-4">
         <div className="rounded-xl border bg-white p-4">
           <p className="text-sm text-muted-foreground">Total documents</p>
-          <p className="text-2xl font-bold">{documents.length}</p>
+          <p className="text-2xl font-bold">{pagination.total}</p>
         </div>
         <div className="rounded-xl border bg-white p-4">
           <p className="text-sm text-muted-foreground">Pending signature</p>
@@ -163,7 +188,7 @@ export default function DocumentsPage() {
           <div className="flex h-48 items-center justify-center">
             <p className="text-muted-foreground">Loading documents...</p>
           </div>
-        ) : filteredDocuments.length === 0 ? (
+        ) : documents.length === 0 ? (
           <div className="flex h-48 flex-col items-center justify-center gap-3">
             <FileText className="h-12 w-12 text-muted-foreground/30" />
             <div className="text-center">
@@ -197,7 +222,7 @@ export default function DocumentsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredDocuments.map((doc) => {
+              {documents.map((doc) => {
                 const pendingSigners = doc.signers.filter(
                   (s) => s.status === "PENDING"
                 );
@@ -259,6 +284,38 @@ export default function DocumentsPage() {
               })}
             </TableBody>
           </Table>
+        )}
+
+        {/* Pagination */}
+        {pagination.totalPages > 1 && (
+          <div className="flex items-center justify-between border-t px-4 py-3">
+            <p className="text-sm text-muted-foreground">
+              Showing {(pagination.page - 1) * pagination.limit + 1}-
+              {Math.min(pagination.page * pagination.limit, pagination.total)} of{" "}
+              {pagination.total}
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                disabled={pagination.page <= 1}
+                onClick={() => goToPage(pagination.page - 1)}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-sm">
+                Page {pagination.page} of {pagination.totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="icon"
+                disabled={pagination.page >= pagination.totalPages}
+                onClick={() => goToPage(pagination.page + 1)}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         )}
       </div>
     </div>

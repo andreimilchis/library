@@ -197,7 +197,8 @@ export default function SigningPage() {
       if (res.ok) {
         setSigned(true);
       } else {
-        alert("Failed to sign document. Please try again.");
+        const err = await res.json().catch(() => null);
+        alert(err?.error || "Failed to sign document. Please try again.");
       }
     } catch {
       alert("An error occurred. Please try again.");
