@@ -192,10 +192,12 @@ export default function NewDocumentPage() {
         const data = await res.json();
         router.push(`/documents/${data.id}`);
       } else {
-        alert("Failed to send document. Please try again.");
+        const errData = await res.json().catch(() => null);
+        alert(errData?.error || "Failed to send document. Please try again.");
         setSending(false);
       }
-    } catch {
+    } catch (err) {
+      console.error("Send document error:", err);
       alert("An error occurred. Please try again.");
       setSending(false);
     }

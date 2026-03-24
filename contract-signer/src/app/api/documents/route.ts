@@ -59,6 +59,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  try {
   const formData = await request.formData();
   const file = formData.get("file") as File;
   const name = formData.get("name") as string;
@@ -195,8 +196,9 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Send signing emails (skip self-signer)
+  // Send signing emails (skip self-signer) - fire and forget, never block document creation
   const senderName = session.user.name || "NETkyu";
+  const emailPromises: Promise<void>[] = [];
   for (let i = 0; i < signers.length; i++) {
     const clientSigner = signers[i];
     const dbSigner = sortedDbSigners[i];
@@ -204,36 +206,42 @@ export async function POST(request: NextRequest) {
     // Skip sending email to self-signer
     if (clientSigner.isSelf) continue;
 
-    try {
-      await sendSigningEmail(
-        dbSigner.name,
-        dbSigner.email,
-        name,
-        dbSigner.signingToken,
-        senderName,
-        message || undefined
-      );
+    const emailPromise = (async () => {
+      try {
+        await sendSigningEmail(
+          dbSigner.name,
+          dbSigner.email,
+          name,
+          dbSigner.signingToken,
+          senderName,
+          message || undefined
+        );
 
-      await prisma.documentAuditLog.create({
-        data: {
-          documentId: document.id,
-          signerId: dbSigner.id,
-          action: "Signing email sent",
-          details: `Email sent to ${dbSigner.email}`,
-        },
-      });
-    } catch (error) {
-      console.error(`Failed to send email to ${dbSigner.email}:`, error);
-      await prisma.documentAuditLog.create({
-        data: {
-          documentId: document.id,
-          signerId: dbSigner.id,
-          action: "Email delivery failed",
-          details: `Failed to send email to ${dbSigner.email}`,
-        },
-      });
-    }
+        await prisma.documentAuditLog.create({
+          data: {
+            documentId: document.id,
+            signerId: dbSigner.id,
+            action: "Signing email sent",
+            details: `Email sent to ${dbSigner.email}`,
+          },
+        });
+      } catch (error) {
+        console.error(`Failed to send email to ${dbSigner.email}:`, error);
+        await prisma.documentAuditLog.create({
+          data: {
+            documentId: document.id,
+            signerId: dbSigner.id,
+            action: "Email delivery failed",
+            details: `Failed to send email to ${dbSigner.email}: ${error instanceof Error ? error.message : String(error)}`,
+          },
+        }).catch(() => {});
+      }
+    })();
+    emailPromises.push(emailPromise);
   }
+
+  // Wait for emails but don't fail the request if they error
+  await Promise.allSettled(emailPromises);
 
   // Check if all signers are already signed (e.g., only self-signer)
   const pendingSigners = document.signers.filter((s) => s.status === "PENDING");
@@ -262,4 +270,12 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json({ id: document.id });
+
+  } catch (error) {
+    console.error("Document creation error:", error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Failed to create document" },
+      { status: 500 }
+    );
+  }
 }

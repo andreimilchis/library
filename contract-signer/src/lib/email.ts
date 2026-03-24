@@ -1,14 +1,18 @@
 import { Resend } from "resend";
 import { getAppUrl } from "./utils";
 
+let resendInstance: Resend | null = null;
+
 function getResend(): Resend {
+  if (resendInstance) return resendInstance;
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey || apiKey === "re_your_api_key_here") {
     throw new Error(
       "RESEND_API_KEY is not configured. Please set it in your .env file."
     );
   }
-  return new Resend(apiKey);
+  resendInstance = new Resend(apiKey);
+  return resendInstance;
 }
 
 const getFromAddress = () =>

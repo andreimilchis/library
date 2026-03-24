@@ -38,7 +38,7 @@ export async function GET(
     return new NextResponse(new Uint8Array(buffer), {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${document.name}.pdf"`,
+        "Content-Disposition": `attachment; filename="${document.name.replace(/[^\w\s.-]/g, '_')}.pdf"; filename*=UTF-8''${encodeURIComponent(document.name + '.pdf')}`,
       },
     });
   } catch {

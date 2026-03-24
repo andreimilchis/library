@@ -160,8 +160,13 @@ export function FieldPlacement({
   const signatureCanvasRef = useRef<HTMLCanvasElement>(null);
   const isDrawingRef = useRef(false);
 
-  // Stable blob URL
+  // Stable blob URL with cleanup
   const fileUrl = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
+  useEffect(() => {
+    return () => {
+      if (fileUrl) URL.revokeObjectURL(fileUrl);
+    };
+  }, [fileUrl]);
 
   // Track canvas content dimensions
   useEffect(() => {

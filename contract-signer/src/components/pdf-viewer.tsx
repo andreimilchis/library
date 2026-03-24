@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, memo } from "react";
+import { useState, useMemo, useEffect, memo } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
@@ -19,8 +19,11 @@ export const PdfViewer = memo(function PdfViewer({
 }) {
   const [numPages, setNumPages] = useState<number>(0);
 
-  // Stable blob URL - only recreate when the actual file identity changes
+  // Stable blob URL with cleanup
   const fileUrl = useMemo(() => URL.createObjectURL(file), [file]);
+  useEffect(() => {
+    return () => { URL.revokeObjectURL(fileUrl); };
+  }, [fileUrl]);
 
   // Floor the width to avoid sub-pixel re-renders
   const stableWidth = Math.floor(width) || undefined;
