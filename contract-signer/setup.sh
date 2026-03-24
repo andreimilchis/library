@@ -37,12 +37,7 @@ fi
 echo "PostgreSQL is running"
 
 # Create database if not exists
-if psql -lqt 2>/dev/null | cut -d \| -f 1 | grep -qw contract_signer; then
-  echo "Database 'contract_signer' already exists"
-else
-  echo "Creating database 'contract_signer'..."
-  createdb contract_signer
-fi
+createdb contract_signer 2>/dev/null && echo "Database 'contract_signer' created" || echo "Database 'contract_signer' already exists"
 
 # Get current macOS username for DATABASE_URL
 DB_USER=$(whoami)
