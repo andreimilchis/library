@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, memo } from "react";
+import { useState, useEffect, memo } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
@@ -19,14 +19,24 @@ export const PdfViewer = memo(function PdfViewer({
 }) {
   const [numPages, setNumPages] = useState<number>(0);
 
-  // Stable blob URL with cleanup
-  const fileUrl = useMemo(() => URL.createObjectURL(file), [file]);
+  // Stable blob URL with proper cleanup (React 18 strict mode safe)
+  const [fileUrl, setFileUrl] = useState<string | null>(null);
   useEffect(() => {
-    return () => { URL.revokeObjectURL(fileUrl); };
-  }, [fileUrl]);
+    const url = URL.createObjectURL(file);
+    setFileUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
 
   // Floor the width to avoid sub-pixel re-renders
   const stableWidth = Math.floor(width) || undefined;
+
+  if (!fileUrl) {
+    return (
+      <div className="flex min-h-[700px] items-center justify-center" style={{ aspectRatio: "8.5/11" }}>
+        <p className="text-muted-foreground">Loading PDF...</p>
+      </div>
+    );
+  }
 
   return (
     <Document

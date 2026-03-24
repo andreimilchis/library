@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
@@ -160,13 +160,14 @@ export function FieldPlacement({
   const signatureCanvasRef = useRef<HTMLCanvasElement>(null);
   const isDrawingRef = useRef(false);
 
-  // Stable blob URL with cleanup
-  const fileUrl = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
+  // Stable blob URL with proper cleanup (React 18 strict mode safe)
+  const [fileUrl, setFileUrl] = useState<string | null>(null);
   useEffect(() => {
-    return () => {
-      if (fileUrl) URL.revokeObjectURL(fileUrl);
-    };
-  }, [fileUrl]);
+    if (!file) { setFileUrl(null); return; }
+    const url = URL.createObjectURL(file);
+    setFileUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
 
   // Track canvas content dimensions
   useEffect(() => {
