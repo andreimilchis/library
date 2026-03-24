@@ -10,6 +10,7 @@ const nextConfig: NextConfig = {
     config.resolve.alias.canvas = false;
     return config;
   },
+  output: "standalone",
   poweredByHeader: false,
   reactStrictMode: true,
 };
