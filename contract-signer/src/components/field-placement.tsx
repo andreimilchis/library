@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
@@ -24,7 +24,10 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  "pdfjs-dist/build/pdf.worker.min.mjs",
+  import.meta.url
+).toString();
 
 type Signer = {
   id: string;
@@ -93,12 +96,12 @@ const SIGNER_TEXT_COLORS = [
 type ResizeHandle = "nw" | "ne" | "sw" | "se";
 
 export function FieldPlacement({
-  fileDataUrl,
+  file,
   signers,
   fields,
   onFieldsChange,
 }: {
-  fileDataUrl: string | null;
+  file: File | null;
   signers: Signer[];
   fields: PlacedField[];
   onFieldsChange: (fields: PlacedField[]) => void;
@@ -157,7 +160,13 @@ export function FieldPlacement({
   const signatureCanvasRef = useRef<HTMLCanvasElement>(null);
   const isDrawingRef = useRef(false);
 
-  const pdfSource = fileDataUrl || null;
+  // Stable blob URL with cleanup
+  const fileUrl = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
+  useEffect(() => {
+    return () => {
+      if (fileUrl) URL.revokeObjectURL(fileUrl);
+    };
+  }, [fileUrl]);
 
   // Track canvas content dimensions
   useEffect(() => {
@@ -683,7 +692,7 @@ export function FieldPlacement({
           }}
         >
           {/* PDF rendering */}
-          {!pdfSource ? (
+          {!file ? (
             <div className="flex items-center justify-center" style={{ aspectRatio: "8.5/11" }}>
               <p className="text-muted-foreground">No document uploaded</p>
             </div>
@@ -691,7 +700,7 @@ export function FieldPlacement({
             <div key={stablePageKey} className="page-flip" style={{ minHeight: pageHeight || undefined, aspectRatio: pageHeight ? undefined : "8.5/11" }}>
               {containerWidth > 0 && (
                 <Document
-                  file={pdfSource}
+                  file={fileUrl}
                   onLoadSuccess={({ numPages: n }) => setNumPages(n)}
                   loading={
                     <div className="flex items-center justify-center" style={{ aspectRatio: "8.5/11" }}>

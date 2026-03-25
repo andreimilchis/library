@@ -60,7 +60,6 @@ export default function NewDocumentPage() {
 
   // Step 1 - Document
   const [file, setFile] = useState<File | null>(null);
-  const [fileDataUrl, setFileDataUrl] = useState<string | null>(null);
   const [documentName, setDocumentName] = useState("");
   const [dragOver, setDragOver] = useState(false);
 
@@ -96,43 +95,32 @@ export default function NewDocumentPage() {
     : signers;
 
   // File handling
-  const readAndSetFile = useCallback(
-    (f: File) => {
-      setFile(f);
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === "string") {
-          setFileDataUrl(reader.result);
-        }
-      };
-      reader.readAsDataURL(f);
-      if (!documentName) {
-        setDocumentName(f.name.replace(".pdf", ""));
-      }
-    },
-    [documentName]
-  );
-
   const handleFileDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
       setDragOver(false);
       const droppedFile = e.dataTransfer.files[0];
       if (droppedFile?.type === "application/pdf") {
-        readAndSetFile(droppedFile);
+        setFile(droppedFile);
+        if (!documentName) {
+          setDocumentName(droppedFile.name.replace(".pdf", ""));
+        }
       }
     },
-    [readAndSetFile]
+    [documentName]
   );
 
   const handleFileSelect = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const selectedFile = e.target.files?.[0];
       if (selectedFile?.type === "application/pdf") {
-        readAndSetFile(selectedFile);
+        setFile(selectedFile);
+        if (!documentName) {
+          setDocumentName(selectedFile.name.replace(".pdf", ""));
+        }
       }
     },
-    [readAndSetFile]
+    [documentName]
   );
 
   // Signer handling
@@ -312,7 +300,7 @@ export default function NewDocumentPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => { setFile(null); setFileDataUrl(null); }}
+                    onClick={() => setFile(null)}
                   >
                     <X className="mr-1 h-3 w-3" />
                     Remove
@@ -461,7 +449,7 @@ export default function NewDocumentPage() {
         {/* STEP 3: Place Fields */}
         {step === 3 && (
           <FieldPlacement
-            fileDataUrl={fileDataUrl}
+            file={file}
             signers={allSigners}
             fields={fields}
             onFieldsChange={setFields}

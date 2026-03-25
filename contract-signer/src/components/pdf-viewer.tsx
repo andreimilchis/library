@@ -1,11 +1,14 @@
 "use client";
 
-import { useState, useEffect, memo } from "react";
+import { useState, useMemo, useEffect, memo } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
-pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  "pdfjs-dist/build/pdf.worker.min.mjs",
+  import.meta.url
+).toString();
 
 export const PdfViewer = memo(function PdfViewer({
   file,
@@ -16,32 +19,18 @@ export const PdfViewer = memo(function PdfViewer({
 }) {
   const [numPages, setNumPages] = useState<number>(0);
 
-  // Read file as data URL to avoid blob URL fetch issues with PDF.js
-  const [fileDataUrl, setFileDataUrl] = useState<string | null>(null);
+  // Stable blob URL with cleanup
+  const fileUrl = useMemo(() => URL.createObjectURL(file), [file]);
   useEffect(() => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        setFileDataUrl(reader.result);
-      }
-    };
-    reader.readAsDataURL(file);
-  }, [file]);
+    return () => { URL.revokeObjectURL(fileUrl); };
+  }, [fileUrl]);
 
   // Floor the width to avoid sub-pixel re-renders
   const stableWidth = Math.floor(width) || undefined;
 
-  if (!fileDataUrl) {
-    return (
-      <div className="flex min-h-[700px] items-center justify-center" style={{ aspectRatio: "8.5/11" }}>
-        <p className="text-muted-foreground">Loading PDF...</p>
-      </div>
-    );
-  }
-
   return (
     <Document
-      file={fileDataUrl}
+      file={fileUrl}
       onLoadSuccess={({ numPages }) => setNumPages(numPages)}
       loading={
         <div
