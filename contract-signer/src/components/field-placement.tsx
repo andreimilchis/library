@@ -93,12 +93,12 @@ const SIGNER_TEXT_COLORS = [
 type ResizeHandle = "nw" | "ne" | "sw" | "se";
 
 export function FieldPlacement({
-  file,
+  fileData,
   signers,
   fields,
   onFieldsChange,
 }: {
-  file: File | null;
+  fileData: ArrayBuffer | null;
   signers: Signer[];
   fields: PlacedField[];
   onFieldsChange: (fields: PlacedField[]) => void;
@@ -157,16 +157,8 @@ export function FieldPlacement({
   const signatureCanvasRef = useRef<HTMLCanvasElement>(null);
   const isDrawingRef = useRef(false);
 
-  // Read file as ArrayBuffer to avoid blob URL fetch issues with PDF.js headers
-  const [fileData, setFileData] = useState<{ data: ArrayBuffer } | null>(null);
-  useEffect(() => {
-    if (!file) { setFileData(null); return; }
-    let cancelled = false;
-    file.arrayBuffer().then((buf) => {
-      if (!cancelled) setFileData({ data: buf });
-    });
-    return () => { cancelled = true; };
-  }, [file]);
+  // Wrap ArrayBuffer for react-pdf Document component
+  const pdfSource = fileData ? { data: fileData } : null;
 
   // Track canvas content dimensions
   useEffect(() => {
@@ -692,7 +684,7 @@ export function FieldPlacement({
           }}
         >
           {/* PDF rendering */}
-          {!file ? (
+          {!pdfSource ? (
             <div className="flex items-center justify-center" style={{ aspectRatio: "8.5/11" }}>
               <p className="text-muted-foreground">No document uploaded</p>
             </div>
@@ -700,7 +692,7 @@ export function FieldPlacement({
             <div key={stablePageKey} className="page-flip" style={{ minHeight: pageHeight || undefined, aspectRatio: pageHeight ? undefined : "8.5/11" }}>
               {containerWidth > 0 && (
                 <Document
-                  file={fileData}
+                  file={pdfSource}
                   onLoadSuccess={({ numPages: n }) => setNumPages(n)}
                   loading={
                     <div className="flex items-center justify-center" style={{ aspectRatio: "8.5/11" }}>

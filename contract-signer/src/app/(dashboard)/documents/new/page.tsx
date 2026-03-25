@@ -60,6 +60,7 @@ export default function NewDocumentPage() {
 
   // Step 1 - Document
   const [file, setFile] = useState<File | null>(null);
+  const [fileData, setFileData] = useState<ArrayBuffer | null>(null);
   const [documentName, setDocumentName] = useState("");
   const [dragOver, setDragOver] = useState(false);
 
@@ -95,32 +96,37 @@ export default function NewDocumentPage() {
     : signers;
 
   // File handling
+  const readAndSetFile = useCallback(
+    (f: File) => {
+      setFile(f);
+      f.arrayBuffer().then((buf) => setFileData(buf));
+      if (!documentName) {
+        setDocumentName(f.name.replace(".pdf", ""));
+      }
+    },
+    [documentName]
+  );
+
   const handleFileDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
       setDragOver(false);
       const droppedFile = e.dataTransfer.files[0];
       if (droppedFile?.type === "application/pdf") {
-        setFile(droppedFile);
-        if (!documentName) {
-          setDocumentName(droppedFile.name.replace(".pdf", ""));
-        }
+        readAndSetFile(droppedFile);
       }
     },
-    [documentName]
+    [readAndSetFile]
   );
 
   const handleFileSelect = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const selectedFile = e.target.files?.[0];
       if (selectedFile?.type === "application/pdf") {
-        setFile(selectedFile);
-        if (!documentName) {
-          setDocumentName(selectedFile.name.replace(".pdf", ""));
-        }
+        readAndSetFile(selectedFile);
       }
     },
-    [documentName]
+    [readAndSetFile]
   );
 
   // Signer handling
@@ -300,7 +306,7 @@ export default function NewDocumentPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setFile(null)}
+                    onClick={() => { setFile(null); setFileData(null); }}
                   >
                     <X className="mr-1 h-3 w-3" />
                     Remove
@@ -449,7 +455,7 @@ export default function NewDocumentPage() {
         {/* STEP 3: Place Fields */}
         {step === 3 && (
           <FieldPlacement
-            file={file}
+            fileData={fileData}
             signers={allSigners}
             fields={fields}
             onFieldsChange={setFields}
