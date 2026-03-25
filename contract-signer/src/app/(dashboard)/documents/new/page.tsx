@@ -60,7 +60,7 @@ export default function NewDocumentPage() {
 
   // Step 1 - Document
   const [file, setFile] = useState<File | null>(null);
-  const [fileData, setFileData] = useState<ArrayBuffer | null>(null);
+  const [fileDataUrl, setFileDataUrl] = useState<string | null>(null);
   const [documentName, setDocumentName] = useState("");
   const [dragOver, setDragOver] = useState(false);
 
@@ -99,7 +99,13 @@ export default function NewDocumentPage() {
   const readAndSetFile = useCallback(
     (f: File) => {
       setFile(f);
-      f.arrayBuffer().then((buf) => setFileData(buf));
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === "string") {
+          setFileDataUrl(reader.result);
+        }
+      };
+      reader.readAsDataURL(f);
       if (!documentName) {
         setDocumentName(f.name.replace(".pdf", ""));
       }
@@ -306,7 +312,7 @@ export default function NewDocumentPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => { setFile(null); setFileData(null); }}
+                    onClick={() => { setFile(null); setFileDataUrl(null); }}
                   >
                     <X className="mr-1 h-3 w-3" />
                     Remove
@@ -455,7 +461,7 @@ export default function NewDocumentPage() {
         {/* STEP 3: Place Fields */}
         {step === 3 && (
           <FieldPlacement
-            fileData={fileData}
+            fileDataUrl={fileDataUrl}
             signers={allSigners}
             fields={fields}
             onFieldsChange={setFields}

@@ -93,12 +93,12 @@ const SIGNER_TEXT_COLORS = [
 type ResizeHandle = "nw" | "ne" | "sw" | "se";
 
 export function FieldPlacement({
-  fileData,
+  fileDataUrl,
   signers,
   fields,
   onFieldsChange,
 }: {
-  fileData: ArrayBuffer | null;
+  fileDataUrl: string | null;
   signers: Signer[];
   fields: PlacedField[];
   onFieldsChange: (fields: PlacedField[]) => void;
@@ -157,8 +157,7 @@ export function FieldPlacement({
   const signatureCanvasRef = useRef<HTMLCanvasElement>(null);
   const isDrawingRef = useRef(false);
 
-  // Wrap ArrayBuffer for react-pdf Document component
-  const pdfSource = fileData ? { data: fileData } : null;
+  const pdfSource = fileDataUrl || null;
 
   // Track canvas content dimensions
   useEffect(() => {
