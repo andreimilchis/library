@@ -16,18 +16,20 @@ export const PdfViewer = memo(function PdfViewer({
 }) {
   const [numPages, setNumPages] = useState<number>(0);
 
-  // Stable blob URL with proper cleanup (React 18 strict mode safe)
-  const [fileUrl, setFileUrl] = useState<string | null>(null);
+  // Read file as ArrayBuffer to avoid blob URL fetch issues with PDF.js headers
+  const [fileData, setFileData] = useState<{ data: ArrayBuffer } | null>(null);
   useEffect(() => {
-    const url = URL.createObjectURL(file);
-    setFileUrl(url);
-    return () => URL.revokeObjectURL(url);
+    let cancelled = false;
+    file.arrayBuffer().then((buf) => {
+      if (!cancelled) setFileData({ data: buf });
+    });
+    return () => { cancelled = true; };
   }, [file]);
 
   // Floor the width to avoid sub-pixel re-renders
   const stableWidth = Math.floor(width) || undefined;
 
-  if (!fileUrl) {
+  if (!fileData) {
     return (
       <div className="flex min-h-[700px] items-center justify-center" style={{ aspectRatio: "8.5/11" }}>
         <p className="text-muted-foreground">Loading PDF...</p>
@@ -37,7 +39,7 @@ export const PdfViewer = memo(function PdfViewer({
 
   return (
     <Document
-      file={fileUrl}
+      file={fileData}
       onLoadSuccess={({ numPages }) => setNumPages(numPages)}
       loading={
         <div

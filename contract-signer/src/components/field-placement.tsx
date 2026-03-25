@@ -157,13 +157,15 @@ export function FieldPlacement({
   const signatureCanvasRef = useRef<HTMLCanvasElement>(null);
   const isDrawingRef = useRef(false);
 
-  // Stable blob URL with proper cleanup (React 18 strict mode safe)
-  const [fileUrl, setFileUrl] = useState<string | null>(null);
+  // Read file as ArrayBuffer to avoid blob URL fetch issues with PDF.js headers
+  const [fileData, setFileData] = useState<{ data: ArrayBuffer } | null>(null);
   useEffect(() => {
-    if (!file) { setFileUrl(null); return; }
-    const url = URL.createObjectURL(file);
-    setFileUrl(url);
-    return () => URL.revokeObjectURL(url);
+    if (!file) { setFileData(null); return; }
+    let cancelled = false;
+    file.arrayBuffer().then((buf) => {
+      if (!cancelled) setFileData({ data: buf });
+    });
+    return () => { cancelled = true; };
   }, [file]);
 
   // Track canvas content dimensions
@@ -698,7 +700,7 @@ export function FieldPlacement({
             <div key={stablePageKey} className="page-flip" style={{ minHeight: pageHeight || undefined, aspectRatio: pageHeight ? undefined : "8.5/11" }}>
               {containerWidth > 0 && (
                 <Document
-                  file={fileUrl}
+                  file={fileData}
                   onLoadSuccess={({ numPages: n }) => setNumPages(n)}
                   loading={
                     <div className="flex items-center justify-center" style={{ aspectRatio: "8.5/11" }}>
